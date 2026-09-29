@@ -1,3 +1,4 @@
+import { Hono } from "hono";
 import { handle } from "hono/aws-lambda";
 import { createApp } from "./app.ts";
 import { cognitoAuthenticator } from "./auth.ts";
@@ -5,9 +6,12 @@ import { required } from "./config.ts";
 import { createDataApiDb } from "./db/client.ts";
 import { cognitoDirectory } from "./directory.ts";
 
-/** API Lambda behind API Gateway. Always uses Cognito; local auth is never available here. */
+/**
+ * API Lambda behind API Gateway, served under `/api` on the same domain as the
+ * web app. Always uses Cognito; local auth is never available here.
+ */
 export const handler = handle(
-  createApp({
+  new Hono().route("/api", createApp({
     db: createDataApiDb({
       resourceArn: required("DB_CLUSTER_ARN"),
       secretArn: required("DB_SECRET_ARN"),
@@ -23,5 +27,5 @@ export const handler = handle(
       manageUsers: process.env.COGNITO_MANAGE_USERS === "true",
     }),
     ownerEmail: required("OWNER_EMAIL"),
-  }),
+  })),
 );
