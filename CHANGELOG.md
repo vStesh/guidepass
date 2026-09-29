@@ -20,4 +20,5 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Runs and results: start a run on one environment, platform and device; mark scenarios (`pass`, `fail`, `skip`, clear to `untested`) with notes in your own run; finish and reopen runs; per-run counts.
 - Guide results: every tester's result per environment and platform, combined verdicts (`conflict` when a pass and a fail meet), progress counts, a `problems` filter, and carry-over of results from older versions for unchanged scenarios.
 - Interface language per person (`en`, `uk`) in the profile; `PATCH /me`.
+- Team members and invitations: owners invite by email (as owner or tester), list and revoke pending invitations, change roles and remove members; a team always keeps an owner. Invited people join on their first sign-in with that email. In a user pool Guidepass created, an invitation creates the Cognito account and emails a temporary password; in a shared pool only people who already have an account can be invited.
 - README with core concepts, MIT license.

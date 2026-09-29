@@ -1,8 +1,10 @@
 import { eq } from "drizzle-orm";
 import type { Context } from "hono";
 import type { Db } from "./db/client.ts";
+import type { UserDirectory } from "./directory.ts";
 import { memberships, type Locale, type Role } from "./db/schema.ts";
 import { ApiError } from "./errors.ts";
+import { acceptPendingInvitation } from "./services/invitations.ts";
 
 export interface AppEnv {
   Variables: {
@@ -10,6 +12,7 @@ export interface AppEnv {
     user: { id: string; email: string; name: string | null; locale: Locale };
     /** Only this email may run `/setup`; unset in local development. */
     ownerEmail: string | undefined;
+    directory: UserDirectory;
   };
 }
 
@@ -22,12 +25,21 @@ export interface Membership {
  * The signed-in person's team. One instance serves one project, so v1 has a
  * single team per person.
  */
+export async function findMembership(c: Context<AppEnv>): Promise<Membership | undefined> {
+  const find = async () =>
+    (
+      await c.var.db
+        .select({ teamId: memberships.teamId, role: memberships.role })
+        .from(memberships)
+        .where(eq(memberships.userId, c.var.user.id))
+        .limit(1)
+    )[0];
+  // First sign-in after being invited: join the team on the spot.
+  return (await find()) ?? ((await acceptPendingInvitation(c.var.db, c.var.user)) ? find() : undefined);
+}
+
 export async function requireMembership(c: Context<AppEnv>, role?: Role): Promise<Membership> {
-  const [membership] = await c.var.db
-    .select({ teamId: memberships.teamId, role: memberships.role })
-    .from(memberships)
-    .where(eq(memberships.userId, c.var.user.id))
-    .limit(1);
+  const membership = await findMembership(c);
   if (!membership) throw new ApiError("forbidden", "You are not a member of a team yet.");
   if (role === "owner" && membership.role !== "owner") {
     throw new ApiError("forbidden", "Only team owners can do this.");

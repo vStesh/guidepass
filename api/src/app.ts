@@ -3,20 +3,23 @@ import { Hono } from "hono";
 import type { Authenticator } from "./auth.ts";
 import type { AppEnv } from "./context.ts";
 import type { Db } from "./db/client.ts";
+import type { UserDirectory } from "./directory.ts";
 import { users } from "./db/schema.ts";
 import { ApiError } from "./errors.ts";
 import { appRoutes } from "./routes/apps.ts";
 import { guideRoutes } from "./routes/guides.ts";
+import { memberRoutes } from "./routes/members.ts";
 import { runRoutes } from "./routes/runs.ts";
 import { teamRoutes } from "./routes/team.ts";
 
 export interface AppDeps {
   db: Db;
   authenticate: Authenticator;
+  directory: UserDirectory;
   ownerEmail?: string;
 }
 
-export function createApp({ db, authenticate, ownerEmail }: AppDeps) {
+export function createApp({ db, authenticate, directory, ownerEmail }: AppDeps) {
   const app = new Hono<AppEnv>();
 
   app.onError((err, c) => {
@@ -45,6 +48,7 @@ export function createApp({ db, authenticate, ownerEmail }: AppDeps) {
 
     c.set("db", db);
     c.set("ownerEmail", ownerEmail);
+    c.set("directory", directory);
     c.set("user", user!);
     await next();
   });
@@ -53,6 +57,7 @@ export function createApp({ db, authenticate, ownerEmail }: AppDeps) {
   app.route("/", appRoutes);
   app.route("/", guideRoutes);
   app.route("/", runRoutes);
+  app.route("/", memberRoutes);
 
   return app;
 }

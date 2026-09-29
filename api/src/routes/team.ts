@@ -2,7 +2,7 @@ import { validate } from "../validate.ts";
 import { asc, eq, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { z } from "zod";
-import { requireMembership, type AppEnv } from "../context.ts";
+import { findMembership, requireMembership, type AppEnv } from "../context.ts";
 import { environments, memberships, teams, users } from "../db/schema.ts";
 import { ApiError } from "../errors.ts";
 
@@ -10,13 +10,10 @@ export const teamRoutes = new Hono<AppEnv>();
 
 /** The signed-in person and their team, or `team: null` before setup or an invitation. */
 teamRoutes.get("/me", async (c) => {
-  const [row] = await c.var.db
-    .select({ id: teams.id, name: teams.name, role: memberships.role })
-    .from(memberships)
-    .innerJoin(teams, eq(teams.id, memberships.teamId))
-    .where(eq(memberships.userId, c.var.user.id))
-    .limit(1);
-  return c.json({ user: c.var.user, team: row ?? null });
+  const membership = await findMembership(c);
+  if (!membership) return c.json({ user: c.var.user, team: null });
+  const [team] = await c.var.db.select({ id: teams.id, name: teams.name }).from(teams).where(eq(teams.id, membership.teamId));
+  return c.json({ user: c.var.user, team: { ...team!, role: membership.role } });
 });
 
 /** Update your own profile: display name and interface language. */
