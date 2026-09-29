@@ -47,16 +47,16 @@ Apps in the team, with their platforms and areas. The agent calls this first to 
 - Output: `apps[]` with `id`, `slug`, `name`, `platforms`, and `areas[]` (`id`, `slug`, `name`, `activeGuides`).
 
 #### `get_guide_instructions`
-How to write a guide for this team: the instructions (Markdown), the language guides are written in, and the guide JSON Schema. The agent must call this before writing or updating a guide.
+How to write a guide for this team: the instructions (Markdown), the language guides are written in, the environments configured for this instance, and the guide JSON Schema. The agent must call this before writing or updating a guide.
 
 - Input: none.
-- Output: `language`, `instructions`, `schema`.
+- Output: `language`, `environments[]` (`key`, `name`, in display order), `instructions`, `schema`.
 
 #### `list_guides`
 Guides of an app, newest first, with progress per platform.
 
-- Input: `appId`; optional `areaId`, `status` (`active` default, `archived`, `all`), `build`, `limit` (default 20).
-- Output: `guides[]` with `id`, `slug`, `title`, `areaId`, `build`, `branch`, `pr`, `status`, `currentVersion`, `updatedAt`, `testers` (how many people have runs on the current version), and `progress` per platform: `pass`, `fail`, `conflict`, `skip`, `untested` counts of scenarios, using the combined verdicts described in [Several testers on one guide](#several-testers-on-one-guide).
+- Input: `appId`; optional `areaId`, `status` (`active` default, `archived`, `all`), `build`, `environment`, `limit` (default 20).
+- Output: `guides[]` with `id`, `slug`, `title`, `areaId`, `build`, `branch`, `pr`, `environments`, `status`, `currentVersion`, `updatedAt`, `testers` (how many people have runs on the current version), and `progress` per environment and platform: `pass`, `fail`, `conflict`, `skip`, `untested` counts of scenarios, using the combined verdicts described in [Several testers on one guide](#several-testers-on-one-guide).
 
 #### `get_guide`
 Full content of one guide version, plus the version history.
@@ -67,10 +67,10 @@ Full content of one guide version, plus the version history.
 #### `get_results`
 What people found for a guide: for every scenario and platform, each tester's result with their note and device, plus the combined verdict. This is the tool the agent uses after a test session.
 
-- Input: `guideId`; optional `version` (default: current), `platform`, `testerId`, `filter` (`problems` default — scenarios whose verdict is `fail`, `conflict` or `skip`, and important scenarios still `untested`; `all`).
+- Input: `guideId`; optional `version` (default: current), `environment`, `platform`, `testerId`, `filter` (`problems` default — scenarios whose verdict is `fail`, `conflict` or `skip`, and important scenarios still `untested`; `all`).
 - Output:
-  - `runs[]`: `id`, `tester` (`id`, `name`), `platform`, `device`, `startedAt`, `finishedAt`, and the run's own `pass`, `fail`, `skip`, `untested` counts;
-  - `scenarios[]`: `key`, `title`, `important`, and per platform:
+  - `runs[]`: `id`, `tester` (`id`, `name`), `environment`, `platform`, `device`, `startedAt`, `finishedAt`, and the run's own `pass`, `fail`, `skip`, `untested` counts;
+  - `scenarios[]`: `key`, `title`, `important`, and per environment and platform:
     - `verdict` — combined across all runs (see below);
     - `results[]` — one entry per run that has a result for this scenario: `runId`, `tester`, `device`, `status`, `note`, `updatedAt`, `fromVersion`.
 - `fromVersion` is set when the result was recorded against an older version and the scenario is unchanged since then (same key, same steps and expected). Results for changed scenarios are not carried over.
@@ -79,9 +79,9 @@ What people found for a guide: for every scenario and platform, each tester's re
 
 A guide is usually run by several people from the team at once, each on their own devices. Every person has their own runs; nobody's marks overwrite anyone else's.
 
-- A run belongs to one tester, one guide version, one platform and one device. One tester can have several runs on the same platform, for example on a Pixel and on a Samsung.
+- A run belongs to one tester, one guide version, one environment (from the guide's list), one platform and one device. One tester can have several runs on the same platform, for example on a Pixel and on a Samsung.
 - The agent always sees every tester's result separately, with their notes — a failure on one device next to a pass on another is often the most useful thing in a test session.
-- For progress and filtering, the results of one scenario on one platform are combined into a **verdict**:
+- For progress and filtering, the results of one scenario in one environment on one platform are combined into a **verdict** (a pass on dev says nothing about staging, so environments are never mixed):
 
   | Results from all runs | Verdict |
   | --- | --- |
@@ -113,7 +113,7 @@ Create a guide, or add a new version of an existing one.
   - `dryRun` (default `false`) — validate and report, without saving.
 - Checks, in order:
   1. JSON Schema validation; errors returned as `{ path, message }[]`.
-  2. Unique scenario keys.
+  2. Unique scenario keys; every environment key exists in the instance, and scenario environments are a subset of the guide's.
   3. When updating: a scenario key that has results in earlier versions must not disappear — it has to stay, or be marked `deprecated`. The error names the keys.
 - Output: `guideId`, `version`, `url` (web page of the guide), and a `diff` against the previous version: `added`, `changed`, `deprecated`, `unchanged` keys — so the agent can tell the user which scenarios need to be run again.
 
@@ -143,6 +143,7 @@ Authentication failures return HTTP 401 before any tool runs.
 ## Data model additions
 
 - `agent_tokens.scope` (`read` or `write`).
+- `environments` (`key`, `name`, `position`, `archived`) and `runs.environment_key`.
 - `guide_versions.created_by_token_id` alongside `created_by_user_id`, exactly one of them set.
 
 ## Typical session

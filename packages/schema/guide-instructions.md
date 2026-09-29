@@ -27,6 +27,8 @@ Write in the language the team uses for guides (the MCP tool returns it with the
 
 **`meta`** — one line of technical context for people who need it: backend versions, migrations, environment, commit. Testers may skip it.
 
+**`environments`** — where the guide must be run, using the environment keys configured for this instance (the MCP tool returns them). Pick the environments where the change is actually deployed or about to be: usually the development environment first; add staging or production when the guide should be repeated there after a deploy. If a scenario only makes sense in some of them (for example, checking that an older backend still works), set `environments` on that scenario.
+
 **`context`** — 3–6 sentences for the tester, not for a developer:
 - what the user will notice now, described as behavior on screen;
 - why it changed, if that helps to test it (for example, the bug that was reported);
@@ -39,7 +41,7 @@ Use **bold** for the one or two things that matter most. Put code names (functio
 
 **`prerequisites`** — everything the tester must have before starting, as a checklist:
 - minimum build and platforms;
-- environment (dev, staging, production);
+- anything environment-specific: which backend version must be deployed there, which test accounts exist there;
 - accounts and roles, and how many devices (for example, two accounts on two devices for anything involving another user);
 - conditions to reproduce (airplane mode, a location, a specific kind of data).
 
@@ -62,6 +64,7 @@ For each scenario:
 - **`title`** — what is being checked, in a few words.
 - **`important: true`** — for the one to three checks that must pass before the build can go further. Usually the main happy path and the riskiest edge case.
 - **`platforms`** — set only when the scenario applies to some platforms (`["android"]`). Leave it out when it applies to all.
+- **`environments`** — set only when the scenario applies to some of the guide's environments. Leave it out when it applies to all.
 - **`steps`** — 1–4 imperative steps. Name who does what when there is more than one account ("A writes a comment", "B taps Reply"). Use the exact labels the user sees on screen, in quotes.
 - **`expected`** — what the tester must see, concretely enough to decide pass or fail without asking anyone. Include what must *not* happen when that is the risk ("the drawer does not open", "only one reply appears, not two"). If the result persists, say to reopen the screen and check again.
 
@@ -80,7 +83,7 @@ Every upload creates a new version; runs keep pointing at the version they were 
 ## 6. Before uploading
 
 Check that:
-- the JSON validates against the schema;
+- the JSON validates against the schema, and every environment key is one the instance has;
 - every `key` is unique in the guide;
 - every scenario can be passed or failed from its `expected` alone;
 - prerequisites cover every account, device and condition the steps mention;
