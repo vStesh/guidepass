@@ -8,8 +8,9 @@ import {
 /**
  * The user pool, as far as invitations are concerned.
  *
- * - `created`: the pool belongs to Guidepass and an account was created; Cognito
- *   emailed a temporary password.
+ * - `created`: the pool belongs to Guidepass and Cognito emailed a temporary
+ *   password — for a new account, or again for one that never signed in (the
+ *   first password expires after 7 days).
  * - `exists`: the person already has an account.
  * - `missing`: no account, and Guidepass may not create one (a shared pool).
  */
@@ -27,17 +28,24 @@ export interface UserDirectory {
 export function cognitoDirectory(config: { userPoolId: string; manageUsers: boolean }): UserDirectory {
   const client = new CognitoIdentityProviderClient({});
 
-  async function exists(email: string): Promise<boolean> {
+  async function find(email: string) {
     const escaped = email.replace(/["\\]/g, "\\$&");
     const found = await client.send(
       new ListUsersCommand({ UserPoolId: config.userPoolId, Filter: `email = "${escaped}"`, Limit: 1 }),
     );
-    return (found.Users?.length ?? 0) > 0;
+    return found.Users?.[0];
   }
 
   return {
     async ensureUser(email) {
-      if (await exists(email)) return "exists";
+      const user = await find(email);
+      if (user) {
+        if (!config.manageUsers || user.UserStatus !== "FORCE_CHANGE_PASSWORD") return "exists";
+        await client.send(
+          new AdminCreateUserCommand({ UserPoolId: config.userPoolId, Username: user.Username, MessageAction: "RESEND" }),
+        );
+        return "created";
+      }
       if (!config.manageUsers) return "missing";
       try {
         await client.send(

@@ -1,0 +1,16 @@
+# Copy to <instance>.tfvars (ignored by git) and run:
+#   terraform workspace new <instance>
+#   terraform apply -var-file=<instance>.tfvars
+
+name_prefix = "gp-schoolplus"
+owner_email = "you@example.com"
+region      = "eu-central-1"
+
+# Custom domain with the parent zone in this account:
+domain_name    = "gp.example.com"
+hosted_zone_id = "Z0123456789ABCDEFGHIJ"
+
+# Existing Cognito pool (leave out to create one):
+# cognito_user_pool_id = "eu-central-1_XXXXXXXXX"
+
+guide_language = "uk"

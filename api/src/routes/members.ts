@@ -85,7 +85,8 @@ memberRoutes.get("/invitations", async (c) => {
 /**
  * Invite someone by email. In a pool Guidepass owns, this creates their account
  * and Cognito emails a temporary password; in a shared pool they must already
- * have an account. They join the team the first time they sign in.
+ * have an account. They join the team the first time they sign in. Inviting a
+ * pending person again resends the password (answers 200 instead of 201).
  */
 memberRoutes.post(
   "/invitations",
@@ -103,12 +104,14 @@ memberRoutes.post(
     if (member) throw new ApiError("conflict", `${email} is already in the team.`);
 
     const [pending] = await c.var.db
-      .select({ id: invitations.id })
+      .select()
       .from(invitations)
       .where(and(eq(invitations.teamId, teamId), eq(invitations.email, email), eq(invitations.status, "pending")));
-    if (pending) throw new ApiError("conflict", `${email} is already invited.`);
 
+    // Inviting again resends the temporary password if it was never used.
     const account = await c.var.directory.ensureUser(email);
+    if (pending) return c.json({ invitation: pending, accountCreated: account === "created" });
+
     if (account === "missing") {
       throw new ApiError(
         "invalid",

@@ -19,3 +19,6 @@ crash.log
 # IDE
 .idea/
 .vscode/
+
+# Terraform build output
+infra/.build/
