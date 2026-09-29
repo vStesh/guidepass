@@ -175,6 +175,18 @@ resource "aws_cloudfront_distribution" "this" {
     response_headers_policy_id = data.aws_cloudfront_response_headers_policy.security.id
   }
 
+  ordered_cache_behavior {
+    path_pattern               = "/mcp"
+    target_origin_id           = "api"
+    viewer_protocol_policy     = "https-only"
+    allowed_methods            = ["GET", "HEAD", "OPTIONS", "PUT", "POST", "PATCH", "DELETE"]
+    cached_methods             = ["GET", "HEAD"]
+    compress                   = true
+    cache_policy_id            = data.aws_cloudfront_cache_policy.disabled.id
+    origin_request_policy_id   = data.aws_cloudfront_origin_request_policy.all_except_host.id
+    response_headers_policy_id = data.aws_cloudfront_response_headers_policy.security.id
+  }
+
   restrictions {
     geo_restriction {
       restriction_type = "none"

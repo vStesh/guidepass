@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
 import type { Role } from "../api.ts";
+import { AgentTokens } from "../components/AgentTokens.tsx";
 import { ErrorBox, Load, formatDate } from "../components/ui.tsx";
 import { useI18n } from "../i18n/index.tsx";
 import { isOwner, useLoad, useSession } from "../session.tsx";
@@ -85,6 +86,7 @@ export function TeamPage() {
                 ) : (
                   <p className="muted">{t("team.noPending")}</p>
                 )}
+                <AgentTokens />
               </>
             )}
           </>

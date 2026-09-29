@@ -18,7 +18,7 @@ agent writes guide ──► people run it on devices ──► agent reads resu
 
 ## Transport and hosting
 
-- Streamable HTTP, stateless (no MCP session state between requests), served from one Lambda behind the same API Gateway as the API, at `POST /mcp`.
+- Streamable HTTP, stateless (no MCP session state between requests) with JSON responses, served by the API Lambda at `/mcp`, next to `/api` on the same domain.
 - Built with the official TypeScript SDK (`@modelcontextprotocol/sdk`).
 - The Lambda reads and writes Postgres through the Aurora Data API, like the rest of the API.
 
@@ -28,6 +28,7 @@ agent writes guide ──► people run it on devices ──► agent reads resu
 - Sent as `Authorization: Bearer gp_…`. A token belongs to one team; every tool call is limited to that team's data.
 - **Scopes:** `read` (read tools only) and `write` (read tools plus write tools). A token used only for analysis gets `read`.
 - Owners can revoke a token; `last_used_at` is updated on use.
+- A token belongs to the team, not to the person who created it: it keeps working if that person leaves the team or stops being an owner. Revoke it on the Team page when it's no longer needed.
 - Connecting from Claude Code:
 
   ```bash

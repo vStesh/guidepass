@@ -17,6 +17,13 @@ resource "aws_apigatewayv2_route" "api" {
   target    = "integrations/${aws_apigatewayv2_integration.api.id}"
 }
 
+# Remote MCP server for AI agents (agent tokens, not Cognito).
+resource "aws_apigatewayv2_route" "mcp" {
+  api_id    = aws_apigatewayv2_api.this.id
+  route_key = "ANY /mcp"
+  target    = "integrations/${aws_apigatewayv2_integration.api.id}"
+}
+
 resource "aws_apigatewayv2_stage" "default" {
   api_id      = aws_apigatewayv2_api.this.id
   name        = "$default"

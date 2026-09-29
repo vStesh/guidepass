@@ -5,6 +5,7 @@ locals {
   has_domain  = var.domain_name != ""
   create_zone = local.has_domain && var.hosted_zone_id == ""
   zone_id     = local.create_zone ? aws_route53_zone.this[0].zone_id : var.hosted_zone_id
+  public_url  = local.has_domain ? "https://${var.domain_name}" : "https://${aws_cloudfront_distribution.this.domain_name}"
 }
 
 resource "aws_route53_zone" "this" {

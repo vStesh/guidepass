@@ -6,6 +6,7 @@ import type { Db } from "./db/client.ts";
 import type { UserDirectory } from "./directory.ts";
 import { users, type Locale } from "./db/schema.ts";
 import { ApiError } from "./errors.ts";
+import { agentTokenRoutes } from "./routes/agentTokens.ts";
 import { appRoutes } from "./routes/apps.ts";
 import { guideRoutes } from "./routes/guides.ts";
 import { memberRoutes } from "./routes/members.ts";
@@ -70,6 +71,7 @@ export function createApp({ db, authenticate, directory, ownerEmail }: AppDeps) 
   app.route("/", guideRoutes);
   app.route("/", runRoutes);
   app.route("/", memberRoutes);
+  app.route("/", agentTokenRoutes);
 
   return app;
 }
