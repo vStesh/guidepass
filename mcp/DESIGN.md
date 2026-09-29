@@ -69,7 +69,7 @@ What people found for a guide: for every scenario and platform, each tester's re
 
 - Input: `guideId`; optional `version` (default: current), `environment`, `platform`, `testerId`, `filter` (`problems` default — scenarios whose verdict is `fail`, `conflict` or `skip`, and important scenarios still `untested`; `all`).
 - Output:
-  - `runs[]`: `id`, `tester` (`id`, `name`), `environment`, `platform`, `device`, `startedAt`, `finishedAt`, and the run's own `pass`, `fail`, `skip`, `untested` counts;
+  - `runs[]`: `id`, `tester` (`id`, `name`), `environment`, `platform`, `device`, `startedAt`, `finishedAt`, and the run's own `pass`, `fail`, `skip`, `untested` counts — runs on the requested version only (results carried over from older versions name their tester and device inline);
   - `scenarios[]`: `key`, `title`, `important`, and per environment and platform:
     - `verdict` — combined across all runs (see below);
     - `results[]` — one entry per run that has a result for this scenario: `runId`, `tester`, `device`, `status`, `note`, `updatedAt`, `fromVersion`.

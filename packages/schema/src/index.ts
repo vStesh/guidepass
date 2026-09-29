@@ -101,7 +101,7 @@ export interface ScenarioDiff {
 }
 
 /** A scenario is unchanged when everything a tester relies on is the same. */
-function sameCheck(a: Scenario, b: Scenario): boolean {
+export function sameCheck(a: Scenario, b: Scenario): boolean {
   const pick = (s: Scenario) =>
     JSON.stringify([s.steps, s.expected, s.platforms ?? null, s.environments ?? null]);
   return pick(a) === pick(b);
@@ -122,4 +122,28 @@ export function diffScenarios(previous: GuideContent | null, next: GuideContent)
   }
   diff.removed.push(...before.keys());
   return diff;
+}
+
+/** Whether a scenario has to be checked in this environment on this platform. */
+export function appliesTo(scenario: Scenario, environment: string, platform: Platform): boolean {
+  return (
+    !scenario.deprecated &&
+    (!scenario.platforms || scenario.platforms.includes(platform)) &&
+    (!scenario.environments || scenario.environments.includes(environment))
+  );
+}
+
+export type ResultStatus = "pass" | "fail" | "skip";
+export type Verdict = ResultStatus | "conflict" | "untested";
+
+/**
+ * Combines everyone's results for one scenario in one environment on one platform.
+ * A pass next to a fail is a conflict: it works for some people or devices and not others.
+ */
+export function verdict(statuses: ResultStatus[]): Verdict {
+  const has = (s: ResultStatus) => statuses.includes(s);
+  if (has("fail")) return has("pass") ? "conflict" : "fail";
+  if (has("pass")) return "pass";
+  if (has("skip")) return "skip";
+  return "untested";
 }

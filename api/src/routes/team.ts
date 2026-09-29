@@ -3,7 +3,7 @@ import { asc, eq, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { z } from "zod";
 import { requireMembership, type AppEnv } from "../context.ts";
-import { environments, memberships, teams } from "../db/schema.ts";
+import { environments, memberships, teams, users } from "../db/schema.ts";
 import { ApiError } from "../errors.ts";
 
 export const teamRoutes = new Hono<AppEnv>();
@@ -18,6 +18,25 @@ teamRoutes.get("/me", async (c) => {
     .limit(1);
   return c.json({ user: c.var.user, team: row ?? null });
 });
+
+/** Update your own profile: display name and interface language. */
+teamRoutes.patch(
+  "/me",
+  validate(
+    "json",
+    z.object({ name: z.string().trim().min(1).max(100).optional(), locale: z.enum(["en", "uk"]).optional() }),
+  ),
+  async (c) => {
+    const body = c.req.valid("json");
+    if (!Object.keys(body).length) return c.json({ user: c.var.user });
+    const [user] = await c.var.db
+      .update(users)
+      .set(body)
+      .where(eq(users.id, c.var.user.id))
+      .returning({ id: users.id, email: users.email, name: users.name, locale: users.locale });
+    return c.json({ user });
+  },
+);
 
 /**
  * First sign-in on a fresh instance: creates the team and makes the caller its owner.

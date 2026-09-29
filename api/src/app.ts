@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import { Hono } from "hono";
 import type { Authenticator } from "./auth.ts";
 import type { AppEnv } from "./context.ts";
@@ -6,6 +7,7 @@ import { users } from "./db/schema.ts";
 import { ApiError } from "./errors.ts";
 import { appRoutes } from "./routes/apps.ts";
 import { guideRoutes } from "./routes/guides.ts";
+import { runRoutes } from "./routes/runs.ts";
 import { teamRoutes } from "./routes/team.ts";
 
 export interface AppDeps {
@@ -36,9 +38,10 @@ export function createApp({ db, authenticate, ownerEmail }: AppDeps) {
       .values({ id: identity.sub, email: identity.email, name: identity.name ?? null })
       .onConflictDoUpdate({
         target: users.id,
-        set: { email: identity.email, ...(identity.name ? { name: identity.name } : {}) },
+        // Cognito fills the name once; after that it is the person's Guidepass name (PATCH /me).
+        set: { email: identity.email, name: sql`coalesce(${users.name}, excluded.name)` },
       })
-      .returning({ id: users.id, email: users.email, name: users.name });
+      .returning({ id: users.id, email: users.email, name: users.name, locale: users.locale });
 
     c.set("db", db);
     c.set("ownerEmail", ownerEmail);
@@ -49,6 +52,7 @@ export function createApp({ db, authenticate, ownerEmail }: AppDeps) {
   app.route("/", teamRoutes);
   app.route("/", appRoutes);
   app.route("/", guideRoutes);
+  app.route("/", runRoutes);
 
   return app;
 }

@@ -1,13 +1,13 @@
 import { eq } from "drizzle-orm";
 import type { Context } from "hono";
 import type { Db } from "./db/client.ts";
-import { memberships, type Role } from "./db/schema.ts";
+import { memberships, type Locale, type Role } from "./db/schema.ts";
 import { ApiError } from "./errors.ts";
 
 export interface AppEnv {
   Variables: {
     db: Db;
-    user: { id: string; email: string; name: string | null };
+    user: { id: string; email: string; name: string | null; locale: Locale };
     /** Only this email may run `/setup`; unset in local development. */
     ownerEmail: string | undefined;
   };
