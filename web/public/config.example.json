@@ -1,0 +1,5 @@
+{
+  "authMode": "cognito",
+  "cognitoUserPoolId": "eu-central-1_XXXXXXXXX",
+  "cognitoClientId": "xxxxxxxxxxxxxxxxxxxxxxxxxx"
+}

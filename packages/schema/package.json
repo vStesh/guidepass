@@ -6,7 +6,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./guide.schema.json": "./guide.schema.json",
-    "./examples/*": "./examples/*"
+    "./examples/*": "./examples/*",
+    "./core": "./src/core.ts"
   },
   "scripts": {
     "typecheck": "tsc -p .",

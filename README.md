@@ -23,7 +23,7 @@ A small web app for manual testing. An AI agent writes test guides for a build, 
 | --- | --- |
 | `infra/` | Terraform for AWS |
 | `api/` | Lambda handlers behind API Gateway |
-| `web/` | Responsive web app |
+| `web/` | Responsive web app (React, Vite), English and Ukrainian |
 | `mcp/` | Remote MCP server for AI agents |
 | `packages/schema/` | JSON Schema for guides, with examples |
 
@@ -35,10 +35,11 @@ Requires Node.js 22+.
 npm install
 npm test            # all workspaces
 npm run typecheck
-npm run dev -w api  # API on http://localhost:8787, data in api/.data
+npm run dev -w api  # API on http://localhost:8787/api, data in api/.data
+npm run dev -w web  # web app on http://localhost:5173, proxies /api to the API
 ```
 
-Locally the API uses PGlite (Postgres in Node) and trusts an `x-local-user: you@example.com` header instead of Cognito; the Lambda handler always verifies Cognito tokens. After changing `api/src/db/schema.ts`, run `npm run db:generate -w api` and commit the new migration.
+Locally the API uses PGlite (Postgres in Node) and trusts an `x-local-user: you@example.com` header instead of Cognito; the Lambda handler always verifies Cognito tokens. Without a `/config.json` the web app runs in the same local mode: sign in with any email, no password. Deployed instances get `/config.json` from Terraform (see `web/public/config.example.json`). After changing `api/src/db/schema.ts`, run `npm run db:generate -w api` and commit the new migration.
 
 ## Self-hosting
 

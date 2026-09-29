@@ -4,7 +4,7 @@ import type { Authenticator } from "./auth.ts";
 import type { AppEnv } from "./context.ts";
 import type { Db } from "./db/client.ts";
 import type { UserDirectory } from "./directory.ts";
-import { users } from "./db/schema.ts";
+import { users, type Locale } from "./db/schema.ts";
 import { ApiError } from "./errors.ts";
 import { appRoutes } from "./routes/apps.ts";
 import { guideRoutes } from "./routes/guides.ts";
@@ -17,6 +17,12 @@ export interface AppDeps {
   authenticate: Authenticator;
   directory: UserDirectory;
   ownerEmail?: string;
+}
+
+/** `uk` when the browser prefers Ukrainian, otherwise English. */
+export function preferredLocale(acceptLanguage: string | undefined): Locale {
+  const first = acceptLanguage?.split(",")[0]?.trim().toLowerCase() ?? "";
+  return first.startsWith("uk") ? "uk" : "en";
 }
 
 export function createApp({ db, authenticate, directory, ownerEmail }: AppDeps) {
@@ -38,7 +44,13 @@ export function createApp({ db, authenticate, directory, ownerEmail }: AppDeps) 
 
     const [user] = await db
       .insert(users)
-      .values({ id: identity.sub, email: identity.email, name: identity.name ?? null })
+      .values({
+        id: identity.sub,
+        email: identity.email,
+        name: identity.name ?? null,
+        // A new profile starts in the browser's language; later it's the person's choice (PATCH /me).
+        locale: preferredLocale(c.req.header("accept-language")),
+      })
       .onConflictDoUpdate({
         target: users.id,
         // Cognito fills the name once; after that it is the person's Guidepass name (PATCH /me).

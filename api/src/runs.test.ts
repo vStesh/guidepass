@@ -182,6 +182,11 @@ describe("results", () => {
 });
 
 describe("profile", () => {
+  it("starts a new profile in the browser's language", async () => {
+    const res = await app.request("/me", { headers: { "x-local-user": "new@example.com", "accept-language": "uk-UA,uk;q=0.9,en;q=0.8" } });
+    expect(((await res.json()) as any).user.locale).toBe("uk");
+  });
+
   it("stores the interface language", async () => {
     expect((await call("GET", "/me", anna)).body.user.locale).toBe("en");
     expect((await call("PATCH", "/me", anna, { locale: "uk", name: "Анна" })).body.user).toMatchObject({ locale: "uk", name: "Анна" });
