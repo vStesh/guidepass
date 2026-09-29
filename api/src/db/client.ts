@@ -13,9 +13,46 @@ export interface DataApiConfig {
   database: string;
 }
 
-/** Aurora Serverless v2 through the Data API: no VPC or NAT needed in Lambda. */
-export function createDataApiDb(config: DataApiConfig): Db {
-  return drizzleDataApi(new RDSDataClient({}), { ...config, schema });
+/**
+ * Aurora Serverless v2 through the Data API: no VPC or NAT needed in Lambda.
+ *
+ * A paused database answers the first calls with DatabaseResumingException for
+ * up to ~15 s while it wakes up; calls are retried until `resumeWaitMs` runs out.
+ * The API keeps this under API Gateway's 29 s limit; migrations can wait longer.
+ */
+export function createDataApiDb(config: DataApiConfig, options: { resumeWaitMs?: number } = {}): Db {
+  const client = new RDSDataClient({});
+  retryWhileResuming(client, options.resumeWaitMs ?? 22_000);
+  return drizzleDataApi(client, { ...config, schema });
+}
+
+export function isResuming(err: unknown): boolean {
+  for (let e = err as { name?: unknown; cause?: unknown } | undefined; e; e = e.cause as typeof e) {
+    if (e.name === "DatabaseResumingException") return true;
+  }
+  return false;
+}
+
+/** Wraps `client.send` so every Data API call waits for a paused database to resume. */
+export function retryWhileResuming(
+  client: { send: (...args: never[]) => Promise<unknown> },
+  maxWaitMs: number,
+  sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms)),
+): void {
+  const send = client.send.bind(client) as (...args: unknown[]) => Promise<unknown>;
+  client.send = (async (...args: unknown[]) => {
+    let waited = 0;
+    for (let attempt = 0; ; attempt++) {
+      try {
+        return await send(...args);
+      } catch (err) {
+        const delay = Math.min(1000 * 2 ** attempt, 5000);
+        if (!isResuming(err) || waited + delay > maxWaitMs) throw err;
+        await sleep(delay);
+        waited += delay;
+      }
+    }
+  }) as typeof client.send;
 }
 
 export async function migrateDataApiDb(db: Db, migrationsFolder: string): Promise<void> {

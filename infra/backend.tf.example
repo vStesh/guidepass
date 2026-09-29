@@ -1,0 +1,9 @@
+# One state per instance: pick a key per project (e.g. guidepass/schoolplus.tfstate).
+terraform {
+  backend "s3" {
+    bucket       = "my-terraform-state"
+    key          = "guidepass/schoolplus.tfstate"
+    region       = "eu-central-1"
+    use_lockfile = true
+  }
+}

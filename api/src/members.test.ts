@@ -64,9 +64,17 @@ describe("invitations", () => {
     expect(res.body.error.details).toEqual({ reason: "no_account" });
   });
 
-  it("rejects duplicates, members and testers inviting", async () => {
+  it("resends instead of duplicating a pending invitation", async () => {
+    const first = await call("POST", "/invitations", owner, { email: anna });
+    directoryAnswer = "created";
+    const again = await call("POST", "/invitations", owner, { email: anna });
+    expect(again.status).toBe(200);
+    expect(again.body).toMatchObject({ invitation: { id: first.body.invitation.id }, accountCreated: true });
+    expect((await call("GET", "/invitations", owner)).body.invitations).toHaveLength(1);
+  });
+
+  it("rejects members and testers inviting", async () => {
     await call("POST", "/invitations", owner, { email: anna });
-    expect((await call("POST", "/invitations", owner, { email: anna })).status).toBe(409);
     expect((await call("POST", "/invitations", owner, { email: owner })).status).toBe(409);
     await call("GET", "/me", anna);
     expect((await call("POST", "/invitations", anna, { email: "x@example.com" })).status).toBe(403);

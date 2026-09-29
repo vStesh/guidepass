@@ -2,12 +2,46 @@
 
 Terraform for a self-hosted Guidepass deployment on AWS: Cognito (new pool or an existing one), Aurora Serverless v2 Postgres with the Data API, API Gateway, Lambda functions with a configurable name prefix, S3 + CloudFront for the web app.
 
-One deployment per project, in the project's own AWS account. Main variables (draft):
+## Deploy
+
+Requirements: Node.js 22+, Terraform 1.9+, AWS credentials for the target account.
+
+```bash
+# 1. Build the Lambda bundles (api/dist) and the web app (web/dist)
+npm ci && npm run build
+
+# 2. One Terraform workspace and one tfvars file per instance
+cd infra
+terraform init
+terraform workspace new schoolplus          # or: terraform workspace select schoolplus
+cp terraform.tfvars.example schoolplus.tfvars  # edit it; *.tfvars are not committed
+
+# 3. Review, then apply
+terraform plan  -var-file=schoolplus.tfvars
+terraform apply -var-file=schoolplus.tfvars
+```
+
+`apply` also runs the migration Lambda, so the database schema is always in step with the code. Re-run steps 1 and 3 to deploy a new version.
+
+After the first apply:
+- **New user pool:** Cognito emails `owner_email` a temporary password. Sign in at the `url` output, choose a password, name the team.
+- **Existing user pool:** sign in with your existing account. The pool must let people sign in with their email (email as username, or an email alias).
+- Cognito's built-in email sending is limited to a few dozen messages a day; for larger teams configure SES in the user pool.
+- A temporary password is valid for 7 days. Inviting someone again resends it; for the owner of a new pool, run
+  `aws cognito-idp admin-create-user --user-pool-id <pool> --username <owner_email> --message-action RESEND`.
+- An existing user pool must be in the same region as the instance.
+- Worth checking once after the first apply: the Data API is on (`aws rds describe-db-clusters --query "DBClusters[].HttpEndpointEnabled"`), and the database scales to 0 ACU when idle (CloudWatch metric `ServerlessDatabaseCapacity`).
+
+State is local by default, one per workspace. To keep it in S3, copy `backend.tf.example` to `backend.tf` and run `terraform init -reconfigure`.
+
+## Variables
+
+One deployment per project, in the project's own AWS account. Full list with defaults in `variables.tf`; the main ones:
 
 | Variable | Meaning |
 | --- | --- |
-| `name_prefix` | Prefix for every resource name, e.g. `gp`; lets several instances share an account |
-| `domain_name` | Full domain of the instance, e.g. `gp.example.com`; leave empty to use the AWS default domains (CloudFront for the web app, API Gateway for the API) |
+| `name_prefix` | Prefix for every resource name, e.g. `gp-schoolplus`; lets several instances share an account |
+| `domain_name` | Full domain of the instance, e.g. `gp.example.com`; leave empty to use the CloudFront domain |
 | `hosted_zone_id` | Existing Route 53 zone in this account to add records to; leave empty to create a zone for `domain_name` and delegate it (its name servers are an output) |
 | `owner_email` | The only person allowed to set up the instance on first sign-in; everyone else joins by invitation |
 | `cognito_user_pool_id` | Existing user pool to add a Guidepass app client to; leave empty to create a pool (see Cognito options) |
@@ -17,7 +51,13 @@ One deployment per project, in the project's own AWS account. Main variables (dr
 ## DNS options
 
 1. **Parent zone in the same account** — set `hosted_zone_id`; Terraform adds the certificate validation and alias records.
-2. **Parent zone in another account** (for example, the domain lives in the production account and Guidepass in the development account) — leave `hosted_zone_id` empty. Terraform creates a zone for `domain_name` in this account and outputs its name servers; add an `NS` record for `domain_name` with those servers in the parent zone, then run `apply` again to finish certificate validation.
+2. **Parent zone in another account** (for example, the domain lives in the production account and Guidepass in the development account) — leave `hosted_zone_id` empty. Create the zone first, delegate it, then apply the rest:
+   ```bash
+   terraform apply -var-file=svitlofour.tfvars -target=aws_route53_zone.this
+   terraform output delegate_name_servers   # add these as an NS record for domain_name in the parent zone
+   terraform apply -var-file=svitlofour.tfvars
+   ```
+   Certificate validation waits (up to two hours) until the delegation is visible.
 3. **No custom domain** — leave `domain_name` empty; the instance is reachable at the AWS default domains, and a domain can be added later.
 
 ## Cognito options
@@ -28,3 +68,25 @@ One deployment per project, in the project's own AWS account. Main variables (dr
 In both cases the person's email must be verified in the pool (`email_verified`), because invitations are matched by email.
 
 The API Lambda gets `cognito-idp:ListUsers` on the pool in both cases (to check that an invited person has an account), and `cognito-idp:AdminCreateUser` only for a pool Guidepass created (`COGNITO_MANAGE_USERS=true`).
+
+## What gets created
+
+| Resource | Notes |
+| --- | --- |
+| Aurora Serverless v2 PostgreSQL 16 | Data API only, no network ingress; pauses after 15 idle minutes by default (`db_min_capacity = 0`); password managed by RDS in Secrets Manager; deletion protection on |
+| Lambda `<prefix>-api`, `<prefix>-migrate` | Node.js 22 on arm64; the migration Lambda runs on every apply that changes migrations |
+| API Gateway (HTTP API) | `ANY /api/{proxy+}`, throttled (`api_throttle_rate`, `api_throttle_burst`) |
+| S3 + CloudFront | Private bucket with origin access control; `/api/*` forwarded to API Gateway with caching off; app routes served by a CloudFront Function; security headers |
+| Cognito | A web app client in the chosen pool, or a new pool without self sign-up plus the owner's account |
+| Route 53 + ACM | Only with `domain_name`: certificate in us-east-1, DNS validation, A/AAAA aliases |
+
+## Removing an instance
+
+The database and a new user pool are protected from deletion. To remove an instance:
+
+```bash
+terraform apply   -var-file=<instance>.tfvars -var deletion_protection=false
+terraform destroy -var-file=<instance>.tfvars -var deletion_protection=false
+```
+
+A final database snapshot is kept (`<prefix>-db-final-<timestamp>`); delete it in the RDS console when it's no longer needed.
