@@ -5,7 +5,7 @@
   "description": "Content of one guide version. Markdown is allowed in context, changelog items, prerequisites, steps, expected results and deprecation reasons.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schemaVersion", "title", "scenarios"],
+  "required": ["schemaVersion", "title", "environments", "scenarios"],
   "properties": {
     "schemaVersion": { "const": 1 },
     "title": { "type": "string", "minLength": 1, "maxLength": 200 },
@@ -13,6 +13,13 @@
     "branch": { "type": "string" },
     "pr": { "type": "string", "description": "Pull or merge request reference, e.g. \"#112\"." },
     "meta": { "type": "string", "description": "One line of technical context: backend versions, migrations, environment." },
+    "environments": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/environmentKey" },
+      "minItems": 1,
+      "uniqueItems": true,
+      "description": "Environments this guide must be run on, by key (e.g. \"dev\", \"stg\"). Keys must exist in the instance settings; get_guide_instructions returns them."
+    },
     "context": { "type": "string", "description": "What changed and why, for the tester." },
     "changelog": {
       "type": "array",
@@ -65,6 +72,13 @@
           "uniqueItems": true,
           "description": "Platforms this scenario applies to. Omit to apply to all platforms of the app."
         },
+        "environments": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/environmentKey" },
+          "minItems": 1,
+          "uniqueItems": true,
+          "description": "Subset of the guide's environments this scenario applies to. Omit to apply to all of them."
+        },
         "steps": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
         "expected": { "type": "string", "minLength": 1 },
         "deprecated": {
@@ -75,6 +89,7 @@
           "description": "Set when the scenario no longer applies. Shown struck through and excluded from progress."
         }
       }
-    }
+    },
+    "environmentKey": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$", "maxLength": 40 }
   }
 }
