@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import example from "../examples/build-179.json" with { type: "json" };
-import { diffScenarios, validateGuide, type GuideContent } from "./index.ts";
+import { appliesTo, diffScenarios, validateGuide, verdict, type GuideContent } from "./index.ts";
 
 const environments = ["dev", "stg", "prod"];
 
@@ -59,5 +59,28 @@ describe("diffScenarios", () => {
 
   it("treats every scenario as added for a new guide", () => {
     expect(diffScenarios(null, example as GuideContent).added).toHaveLength(4);
+  });
+});
+
+describe("verdict", () => {
+  it.each([
+    [["pass", "fail"], "conflict"],
+    [["fail", "skip"], "fail"],
+    [["pass", "skip"], "pass"],
+    [["skip"], "skip"],
+    [[], "untested"],
+  ] as const)("%j → %s", (statuses, expected) => {
+    expect(verdict([...statuses])).toBe(expected);
+  });
+});
+
+describe("appliesTo", () => {
+  const [reply, android, deprecated, stgOnly] = (example as GuideContent).scenarios;
+  it("respects platforms, environments and deprecation", () => {
+    expect(appliesTo(reply!, "dev", "ios")).toBe(true);
+    expect(appliesTo(android!, "dev", "ios")).toBe(false);
+    expect(appliesTo(deprecated!, "dev", "ios")).toBe(false);
+    expect(appliesTo(stgOnly!, "dev", "ios")).toBe(false);
+    expect(appliesTo(stgOnly!, "stg", "android")).toBe(true);
   });
 });

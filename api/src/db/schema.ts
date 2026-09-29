@@ -9,7 +9,7 @@ import {
   unique,
   uuid,
 } from "drizzle-orm/pg-core";
-import type { GuideContent, Platform } from "@guidepass/schema";
+import type { GuideContent, Platform, ResultStatus } from "@guidepass/schema";
 
 // Arrays are stored as jsonb: the Aurora Data API does not accept array parameters.
 
@@ -25,10 +25,14 @@ export const teams = pgTable("teams", {
  * People, keyed by the Cognito `sub`. Email is not unique: an account recreated
  * in Cognito keeps its email but gets a new `sub`.
  */
+export type Locale = "en" | "uk";
+
 export const users = pgTable("users", {
   id: text("id").primaryKey(),
   email: text("email").notNull(),
   name: text("name"),
+  /** Interface language; guides keep the language they were written in. */
+  locale: text("locale").$type<Locale>().notNull().default("en"),
   createdAt: createdAt(),
 });
 
@@ -127,7 +131,7 @@ export const runs = pgTable("runs", {
   finishedAt: timestamp("finished_at", { withTimezone: true }),
 });
 
-export type ResultStatus = "pass" | "fail" | "skip";
+export type { ResultStatus };
 
 export const results = pgTable(
   "results",

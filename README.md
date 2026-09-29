@@ -12,6 +12,11 @@ A small web app for manual testing. An AI agent writes test guides for a build, 
 - **Scenario** — steps plus the expected result. Each scenario has a stable `key`, so results can be compared across guide versions. A scenario can be limited to some platforms or environments.
 - **Run** — one tester × one guide version × one environment × one platform × one device. Each scenario gets a status (`untested`, `pass`, `fail`, `skip`) and an optional note. Several people can run the same guide; results are combined per environment and platform.
 
+## Languages
+
+- **Interface:** English by default, Ukrainian available. Each person picks their language in their profile (`locale`). The API returns error codes with English messages; the web app shows its own translation for each code.
+- **Guides:** written in the language set for the instance (`guide_language`), independent of anyone's interface language.
+
 ## Repository layout
 
 | Path | What |
