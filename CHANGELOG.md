@@ -9,4 +9,5 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Added
 - Repository skeleton: `infra/`, `api/`, `web/`, `mcp/` and `packages/schema/`.
 - JSON Schema for test guides (`packages/schema/guide.schema.json`) with an example guide.
+- Default instructions for AI agents on writing and updating guides (`packages/schema/guide-instructions.md`).
 - README with core concepts, MIT license.
