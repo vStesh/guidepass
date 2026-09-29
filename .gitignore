@@ -15,3 +15,7 @@ coverage/
 *.tfvars
 !*.tfvars.example
 crash.log
+
+# IDE
+.idea/
+.vscode/
