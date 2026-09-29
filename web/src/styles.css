@@ -220,3 +220,4 @@ a.list-item:hover { border-color: var(--line-strong); box-shadow: var(--shadow);
 .segmented-status .status-skip[aria-pressed="true"] { background: var(--skip); color: #fff; }
 .run-footer { position: sticky; bottom: 0; padding: 12px 0 calc(12px + env(safe-area-inset-bottom)); background: var(--page); }
 .run-footer .button { width: 100%; padding: 12px; }
+.command { display: block; padding: 8px 10px; border-radius: 6px; background: var(--surface); color: var(--text); word-break: break-all; font-size: 0.82rem; }

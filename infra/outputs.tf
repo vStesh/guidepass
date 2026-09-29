@@ -1,6 +1,6 @@
 output "url" {
   description = "Where the instance lives."
-  value       = local.has_domain ? "https://${var.domain_name}" : "https://${aws_cloudfront_distribution.this.domain_name}"
+  value       = local.public_url
 }
 
 output "cloudfront_domain" {
@@ -18,4 +18,9 @@ output "cognito_user_pool_id" {
 
 output "cognito_client_id" {
   value = aws_cognito_user_pool_client.web.id
+}
+
+output "mcp_url" {
+  description = "Remote MCP endpoint for AI agents; create an agent token on the Team page."
+  value       = "${local.public_url}/mcp"
 }

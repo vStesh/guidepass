@@ -62,7 +62,7 @@ runRoutes.get(
   validate(
     "query",
     z.object({
-      version: z.coerce.number().int().min(1).optional(),
+      version: z.coerce.number().int().min(1).max(2_147_483_647).optional(),
       environment: z.string().optional(),
       platform: platform.optional(),
       testerId: z.string().optional(),

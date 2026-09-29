@@ -67,6 +67,21 @@ export const invitations = pgTable("invitations", {
   acceptedAt: timestamp("accepted_at", { withTimezone: true }),
 });
 
+export type TokenScope = "read" | "write";
+
+/** Tokens AI agents use for MCP. Only a SHA-256 hash is stored; the token is shown once. */
+export const agentTokens = pgTable("agent_tokens", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  teamId: uuid("team_id").notNull().references(() => teams.id),
+  name: text("name").notNull(),
+  scope: text("scope").$type<TokenScope>().notNull(),
+  tokenHash: text("token_hash").notNull().unique(),
+  createdBy: text("created_by").notNull().references(() => users.id),
+  createdAt: createdAt(),
+  lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+  revokedAt: timestamp("revoked_at", { withTimezone: true }),
+});
+
 /** Instance-wide list of environments, seeded at deploy and edited by owners. */
 export const environments = pgTable("environments", {
   key: text("key").primaryKey(),
@@ -131,7 +146,7 @@ export const guideVersions = pgTable(
     content: jsonb("content").$type<GuideContent>().notNull(),
     changeNote: text("change_note"),
     createdByUserId: text("created_by_user_id").references(() => users.id),
-    createdByTokenId: uuid("created_by_token_id"),
+    createdByTokenId: uuid("created_by_token_id").references(() => agentTokens.id),
     createdAt: createdAt(),
   },
   (t) => [unique().on(t.guideId, t.version)],

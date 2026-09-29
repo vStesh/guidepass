@@ -113,6 +113,7 @@ resource "aws_lambda_function" "api" {
       COGNITO_MANAGE_USERS = local.create_pool ? "true" : "false"
       OWNER_EMAIL          = var.owner_email
       GUIDE_LANGUAGE       = var.guide_language
+      PUBLIC_URL           = local.public_url
     })
   }
 

@@ -24,7 +24,7 @@ A small web app for manual testing. An AI agent writes test guides for a build, 
 | `infra/` | Terraform for AWS |
 | `api/` | Lambda handlers behind API Gateway |
 | `web/` | Responsive web app (React, Vite), English and Ukrainian |
-| `mcp/` | Remote MCP server for AI agents |
+| `mcp/` | Design and usage of the remote MCP server for AI agents (code in `api/src/mcp/`) |
 | `packages/schema/` | JSON Schema for guides, with examples |
 
 ## Development

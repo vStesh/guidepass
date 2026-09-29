@@ -5,27 +5,39 @@ import { cognitoAuthenticator } from "./auth.ts";
 import { required } from "./config.ts";
 import { createDataApiDb } from "./db/client.ts";
 import { cognitoDirectory } from "./directory.ts";
+import { createMcpHandler } from "./mcp/server.ts";
+
+const db = createDataApiDb({
+  resourceArn: required("DB_CLUSTER_ARN"),
+  secretArn: required("DB_SECRET_ARN"),
+  database: required("DB_NAME"),
+});
+
+const api = createApp({
+  db,
+  authenticate: cognitoAuthenticator({
+    userPoolId: required("COGNITO_USER_POOL_ID"),
+    clientId: required("COGNITO_CLIENT_ID"),
+  }),
+  directory: cognitoDirectory({
+    userPoolId: required("COGNITO_USER_POOL_ID"),
+    // "true" only when Terraform created the pool for Guidepass.
+    manageUsers: process.env.COGNITO_MANAGE_USERS === "true",
+  }),
+  ownerEmail: required("OWNER_EMAIL"),
+});
+
+const mcp = createMcpHandler({
+  db,
+  guideLanguage: process.env.GUIDE_LANGUAGE || "en",
+  publicUrl: required("PUBLIC_URL"),
+});
 
 /**
- * API Lambda behind API Gateway, served under `/api` on the same domain as the
- * web app. Always uses Cognito; local auth is never available here.
+ * One Lambda behind API Gateway, on the same domain as the web app: the web API
+ * under `/api` (Cognito sign-in; local auth is never available here) and the MCP
+ * server at `/mcp` (agent tokens).
  */
 export const handler = handle(
-  new Hono().route("/api", createApp({
-    db: createDataApiDb({
-      resourceArn: required("DB_CLUSTER_ARN"),
-      secretArn: required("DB_SECRET_ARN"),
-      database: required("DB_NAME"),
-    }),
-    authenticate: cognitoAuthenticator({
-      userPoolId: required("COGNITO_USER_POOL_ID"),
-      clientId: required("COGNITO_CLIENT_ID"),
-    }),
-    directory: cognitoDirectory({
-      userPoolId: required("COGNITO_USER_POOL_ID"),
-      // "true" only when Terraform created the pool for Guidepass.
-      manageUsers: process.env.COGNITO_MANAGE_USERS === "true",
-    }),
-    ownerEmail: required("OWNER_EMAIL"),
-  })),
+  new Hono().route("/api", api).all("/mcp", (c) => mcp(c.req.raw)),
 );

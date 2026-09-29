@@ -20,5 +20,7 @@ const common = {
 };
 
 await build({ ...common, entryPoints: ["src/handler.ts"], outfile: `${dist}api/index.mjs` });
+// The MCP server hands these to agents; read at runtime next to the bundle.
+cpSync(new URL("../packages/schema/guide-instructions.md", import.meta.url).pathname, `${dist}api/guide-instructions.md`);
 await build({ ...common, entryPoints: ["src/migrate-handler.ts"], outfile: `${dist}migrate/index.mjs` });
 cpSync(new URL("./migrations", import.meta.url).pathname, `${dist}migrate/migrations`, { recursive: true });

@@ -129,6 +129,14 @@ export interface Invitation {
   createdAt: string;
 }
 
+export interface AgentToken {
+  id: string;
+  name: string;
+  scope: "read" | "write";
+  createdAt: string;
+  lastUsedAt: string | null;
+}
+
 export interface UploadResult {
   guideId: string | null;
   version: number;
@@ -214,6 +222,11 @@ export function createApi(auth: Auth) {
     invite: (email: string, role: Role) =>
       request<{ invitation: Invitation; accountCreated: boolean }>("POST", "/invitations", { email, role }),
     revokeInvitation: (id: string) => request<unknown>("DELETE", `/invitations/${id}`),
+
+    agentTokens: () => request<{ tokens: AgentToken[] }>("GET", "/agent-tokens"),
+    createAgentToken: (name: string, scope: AgentToken["scope"]) =>
+      request<{ token: AgentToken & { token: string } }>("POST", "/agent-tokens", { name, scope }),
+    revokeAgentToken: (id: string) => request<unknown>("DELETE", `/agent-tokens/${id}`),
   };
 }
 
