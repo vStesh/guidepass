@@ -22,6 +22,19 @@ A small web app for manual testing. An AI agent writes test guides for a build, 
 | `mcp/` | Remote MCP server for AI agents |
 | `packages/schema/` | JSON Schema for guides, with examples |
 
+## Development
+
+Requires Node.js 22+.
+
+```bash
+npm install
+npm test            # all workspaces
+npm run typecheck
+npm run dev -w api  # API on http://localhost:8787, data in api/.data
+```
+
+Locally the API uses PGlite (Postgres in Node) and trusts an `x-local-user: you@example.com` header instead of Cognito; the Lambda handler always verifies Cognito tokens. After changing `api/src/db/schema.ts`, run `npm run db:generate -w api` and commit the new migration.
+
 ## Self-hosting
 
 Guidepass is deployed once per project, into the AWS account where that project already lives, on a subdomain of the project's domain (for example `gp.example.com`). Several instances can share one AWS account.

@@ -13,4 +13,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - MCP server design (`mcp/DESIGN.md`): tools, agent tokens, per-tester results with combined verdicts.
 - Environments: configurable per instance (set at deploy, editable by owners); guides list the environments they must be run on, scenarios can be limited to some of them, runs and verdicts are per environment.
 - Deployment model: one instance per project in the project's AWS account, on a subdomain; draft Terraform variables and three DNS options in `infra/README.md`.
+- npm workspaces monorepo with TypeScript, Vitest and oxlint.
+- `@guidepass/schema` package: guide types, validation (schema, unique keys, known environments) and scenario diff between versions.
+- API skeleton (Hono on Lambda, Drizzle over the Aurora Data API, PGlite locally): instance setup, environments, apps, areas, guides with versioned uploads (`dryRun`, `baseVersion`, protection for scenarios that have results), guide list filters and archiving. Cognito ID-token auth (verified email required); first-time setup limited to the owner email set at deploy.
+- Initial database migration and a migration Lambda that seeds environments on first deploy.
 - README with core concepts, MIT license.
