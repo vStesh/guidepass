@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/vStesh/guidepass/packages/schema/guide.schema.json",
+  "title": "Guidepass test guide",
+  "description": "Content of one guide version. Markdown is allowed in context, changelog items, prerequisites, steps, expected results and deprecation reasons.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "title", "scenarios"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "title": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "build": { "type": "string", "description": "Build number or version under test, e.g. \"179\"." },
+    "branch": { "type": "string" },
+    "pr": { "type": "string", "description": "Pull or merge request reference, e.g. \"#112\"." },
+    "meta": { "type": "string", "description": "One line of technical context: backend versions, migrations, environment." },
+    "context": { "type": "string", "description": "What changed and why, for the tester." },
+    "changelog": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["section", "items"],
+        "properties": {
+          "section": { "type": "string", "minLength": 1 },
+          "items": { "type": "array", "items": { "type": "string" }, "minItems": 1 }
+        }
+      }
+    },
+    "prerequisites": { "type": "array", "items": { "type": "string" } },
+    "scenarios": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/scenario" }
+    },
+    "related": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["label"],
+        "properties": {
+          "label": { "type": "string", "minLength": 1 },
+          "url": { "type": ["string", "null"], "format": "uri" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "scenario": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "title", "steps", "expected"],
+      "properties": {
+        "key": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+          "maxLength": 80,
+          "description": "Stable id, unique within the guide. Keep it unchanged when the scenario is edited so results carry over between versions."
+        },
+        "title": { "type": "string", "minLength": 1 },
+        "important": { "type": "boolean", "default": false, "description": "Key scenario that must be checked on every run." },
+        "platforms": {
+          "type": "array",
+          "items": { "enum": ["ios", "android", "web"] },
+          "uniqueItems": true,
+          "description": "Platforms this scenario applies to. Omit to apply to all platforms of the app."
+        },
+        "steps": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+        "expected": { "type": "string", "minLength": 1 },
+        "deprecated": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "required": ["reason"],
+          "properties": { "reason": { "type": "string", "minLength": 1 } },
+          "description": "Set when the scenario no longer applies. Shown struck through and excluded from progress."
+        }
+      }
+    }
+  }
+}
