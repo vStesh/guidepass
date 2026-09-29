@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import example from "@guidepass/schema/examples/build-179.json" with { type: "json" };
 import { createApp } from "./app.ts";
 import { localAuthenticator } from "./auth.ts";
+import { localDirectory } from "./directory.ts";
 import { defaultEnvironments, seedEnvironments, type Db } from "./db/client.ts";
 import { createLocalDb } from "./db/local.ts";
 import { memberships } from "./db/schema.ts";
@@ -36,7 +37,7 @@ const mark = (as: string, runId: string, key: string, status: string, note?: str
 beforeEach(async () => {
   db = await createLocalDb();
   await seedEnvironments(db, defaultEnvironments);
-  app = createApp({ db, authenticate: localAuthenticator });
+  app = createApp({ db, authenticate: localAuthenticator, directory: localDirectory });
 
   await call("POST", "/setup", owner, { teamName: "Svitlofour" });
   const team = (await call("GET", "/me", owner)).body.team;

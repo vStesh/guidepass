@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import example from "@guidepass/schema/examples/build-179.json" with { type: "json" };
 import { createApp } from "./app.ts";
 import { localAuthenticator } from "./auth.ts";
+import { localDirectory } from "./directory.ts";
 import type { Db } from "./db/client.ts";
 import { defaultEnvironments, seedEnvironments } from "./db/client.ts";
 import { createLocalDb } from "./db/local.ts";
@@ -36,7 +37,7 @@ async function setUpApp() {
 beforeEach(async () => {
   db = await createLocalDb();
   await seedEnvironments(db, defaultEnvironments);
-  app = createApp({ db, authenticate: localAuthenticator });
+  app = createApp({ db, authenticate: localAuthenticator, directory: localDirectory });
 });
 
 describe("auth and setup", () => {
@@ -58,7 +59,7 @@ describe("auth and setup", () => {
   });
 
   it("restricts setup to the configured owner email", async () => {
-    app = createApp({ db, authenticate: localAuthenticator, ownerEmail: "Owner@Example.com" });
+    app = createApp({ db, authenticate: localAuthenticator, directory: localDirectory, ownerEmail: "Owner@Example.com" });
     expect((await call("POST", "/setup", { as: tester, body: { teamName: "Mine" } })).status).toBe(403);
     expect((await call("POST", "/setup", { as: owner, body: { teamName: "Team" } })).status).toBe(201);
   });
@@ -68,6 +69,7 @@ describe("auth and setup", () => {
     const other = createApp({
       db,
       authenticate: async () => ({ sub: "new-sub", email: owner }),
+      directory: localDirectory,
     });
     expect((await other.request("/me")).status).toBe(200);
   });

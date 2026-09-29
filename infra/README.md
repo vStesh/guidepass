@@ -26,3 +26,5 @@ One deployment per project, in the project's own AWS account. Main variables (dr
 2. **New user pool** — leave `cognito_user_pool_id` empty. Terraform creates a pool just for Guidepass, and invitations create the account and email a temporary password.
 
 In both cases the person's email must be verified in the pool (`email_verified`), because invitations are matched by email.
+
+The API Lambda gets `cognito-idp:ListUsers` on the pool in both cases (to check that an invited person has an account), and `cognito-idp:AdminCreateUser` only for a pool Guidepass created (`COGNITO_MANAGE_USERS=true`).

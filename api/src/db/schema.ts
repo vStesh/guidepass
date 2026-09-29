@@ -49,6 +49,24 @@ export const memberships = pgTable(
   (t) => [primaryKey({ columns: [t.teamId, t.userId] })],
 );
 
+export type InvitationStatus = "pending" | "accepted" | "revoked";
+
+/**
+ * Invitations are matched by verified email on sign-in: nobody needs a link,
+ * signing in with the invited email is enough.
+ */
+export const invitations = pgTable("invitations", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  teamId: uuid("team_id").notNull().references(() => teams.id),
+  /** Stored lowercased. */
+  email: text("email").notNull(),
+  role: text("role").$type<Role>().notNull(),
+  status: text("status").$type<InvitationStatus>().notNull().default("pending"),
+  invitedBy: text("invited_by").notNull().references(() => users.id),
+  createdAt: createdAt(),
+  acceptedAt: timestamp("accepted_at", { withTimezone: true }),
+});
+
 /** Instance-wide list of environments, seeded at deploy and edited by owners. */
 export const environments = pgTable("environments", {
   key: text("key").primaryKey(),
