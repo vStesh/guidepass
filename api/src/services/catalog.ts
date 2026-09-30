@@ -1,4 +1,5 @@
 import { and, asc, count, desc, eq, sql } from "drizzle-orm";
+import type { GuideType } from "@guidepass/schema";
 import type { Db } from "../db/client.ts";
 import { apps, areas, guideVersions, guides, type GuideStatus } from "../db/schema.ts";
 import { ApiError, isUniqueViolation } from "../errors.ts";
@@ -54,6 +55,7 @@ export interface GuideFilters {
   status?: GuideStatus | "all";
   build?: string;
   environment?: string;
+  type?: GuideType;
   limit?: number;
 }
 
@@ -63,6 +65,7 @@ export async function listGuides(db: Db, teamId: string, appId: string, query: G
   const status = query.status ?? "active";
   if (status !== "all") filters.push(eq(guides.status, status));
   if (query.build) filters.push(eq(guides.build, query.build));
+  if (query.type) filters.push(eq(guides.type, query.type));
   if (query.environment) {
     filters.push(sql`${guides.environments} @> ${JSON.stringify([query.environment])}::jsonb`);
   }
@@ -72,6 +75,7 @@ export async function listGuides(db: Db, teamId: string, appId: string, query: G
       id: guides.id,
       slug: guides.slug,
       title: guides.title,
+      type: guides.type,
       areaId: guides.areaId,
       build: guides.build,
       branch: guides.branch,

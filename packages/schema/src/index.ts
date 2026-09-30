@@ -21,11 +21,12 @@ const validateSchema = ajv.compile<GuideContent>(guideSchema);
 
 /**
  * Validates guide content against the JSON Schema and the rules the schema
- * cannot express: unique scenario keys and known environment keys.
+ * cannot express: unique scenario keys, known environment keys and, when given,
+ * the app's platforms.
  */
 export function validateGuide(
   content: unknown,
-  options: { environments: string[] },
+  options: { environments: string[]; platforms?: string[] },
 ): ValidationResult {
   if (!validateSchema(content)) {
     return {
@@ -53,6 +54,17 @@ export function validateGuide(
       errors.push({ path: `/scenarios/${i}/key`, message: `duplicate key "${scenario.key}"` });
     }
     seen.add(scenario.key);
+    if (options.platforms) {
+      const platforms = new Set(options.platforms);
+      scenario.platforms?.forEach((platform, j) => {
+        if (!platforms.has(platform)) {
+          errors.push({
+            path: `/scenarios/${i}/platforms/${j}`,
+            message: `"${platform}" is not one of the app's platforms (${options.platforms!.join(", ")})`,
+          });
+        }
+      });
+    }
     scenario.environments?.forEach((env, j) => {
       if (!guideEnvironments.has(env)) {
         errors.push({

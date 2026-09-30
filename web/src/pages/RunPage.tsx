@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router";
 import { appliesTo, type ResultStatus, type Scenario } from "@guidepass/schema/core";
 import type { RunDetail } from "../api.ts";
-import { ErrorBox, Load, ProgressBar } from "../components/ui.tsx";
+import { ErrorBox, Load, ProgressBar, platformLabel } from "../components/ui.tsx";
 import { useI18n } from "../i18n/index.tsx";
 import { useLoad, useSession } from "../session.tsx";
 import { Prerequisites, ScenarioBody } from "./GuidePage.tsx";
@@ -22,6 +22,7 @@ export function RunPage() {
       {(data) => {
         const { run, content, environments, members } = data;
         const envName = (key: string) => environments.find((e) => e.key === key)?.name ?? key;
+        const platformName = (key: string) => platformLabel(t, key, data.app.platformNames);
         const mine = run.testerId === me.user.id;
         const editable = mine && !run.finishedAt;
         const scenarios = content.scenarios.filter((s) => appliesTo(s, run.environmentKey, run.platform));
@@ -34,7 +35,7 @@ export function RunPage() {
             </Link>
             <div className="run-head">
               <h1>
-                {envName(run.environmentKey)} · {t(`platform.${run.platform}`)} · {run.device}
+                {envName(run.environmentKey)} · {platformName(run.platform)} · {run.device}
               </h1>
               <RunProgress run={data} />
             </div>
@@ -57,6 +58,7 @@ export function RunPage() {
                   runId={run.id}
                   scenario={s}
                   envName={envName}
+                  platformName={platformName}
                   editable={editable}
                   result={data.results.find((r) => r.scenarioKey === s.key)}
                   onSaved={reload}
@@ -100,6 +102,7 @@ function ScenarioCard({
   runId,
   scenario,
   envName,
+  platformName,
   editable,
   result,
   onSaved,
@@ -107,6 +110,7 @@ function ScenarioCard({
   runId: string;
   scenario: Scenario;
   envName: (k: string) => string;
+  platformName: (k: string) => string;
   editable: boolean;
   result?: { status: ResultStatus; note: string | null };
   onSaved: () => void;
@@ -134,7 +138,7 @@ function ScenarioCard({
   const status = result?.status;
   return (
     <li className={`run-card${status ? ` run-card-${status}` : ""}`}>
-      <ScenarioBody scenario={scenario} envName={envName} />
+      <ScenarioBody scenario={scenario} envName={envName} platformName={platformName} />
       <div className="segmented segmented-status" role="group" aria-label={scenario.title}>
         {(["pass", "fail", "skip"] as const).map((s) => (
           <button

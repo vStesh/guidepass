@@ -2,7 +2,7 @@ import { useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
 import type { GuideContent, Platform, Scenario } from "@guidepass/schema/core";
 import type { App, Environment, GuideResults } from "../api.ts";
-import { Chip, ErrorBox, Load, Markdown, ProgressBar, VerdictBadge, formatDate } from "../components/ui.tsx";
+import { Chip, ErrorBox, Load, Markdown, ProgressBar, TypeBadge, VerdictBadge, formatDate, platformLabel } from "../components/ui.tsx";
 import { useI18n } from "../i18n/index.tsx";
 import { isOwner, useLoad, useSession } from "../session.tsx";
 
@@ -39,6 +39,7 @@ export function GuidePage() {
         const { guide, content } = detail;
         const latest = guide.currentVersion;
         const envName = (key: string) => environments.find((e) => e.key === key)?.name ?? key;
+        const platformName = (key: string) => platformLabel(t, key, app.platformNames);
         const isLatest = detail.version === latest;
 
         return (
@@ -55,6 +56,7 @@ export function GuidePage() {
                   {envName(e)}
                 </Chip>
               ))}
+              {content.type && <TypeBadge type={content.type} />}
               {content.build && <Chip>build {content.build}</Chip>}
               {content.pr && <Chip>{content.pr}</Chip>}
               {content.branch && <Chip>{content.branch}</Chip>}
@@ -90,7 +92,7 @@ export function GuidePage() {
               <StartRun guideId={guide.id} content={content} app={app} environments={environments} />
             )}
 
-            <RunsList results={results} envName={envName} myId={me.user.id} />
+            <RunsList results={results} envName={envName} platformName={platformName} myId={me.user.id} />
 
             <section className="section-gap">
               <div className="section-head">
@@ -100,14 +102,14 @@ export function GuidePage() {
                   {t("guide.onlyProblems")}
                 </label>
               </div>
-              <ResultsMatrix results={results} envName={envName} />
+              <ResultsMatrix results={results} envName={envName} platformName={platformName} />
             </section>
 
             <details className="card section-gap" open={!results.runs.length}>
               <summary>
                 <h2>{t("guide.content")}</h2>
               </summary>
-              <GuideContentView content={content} envName={envName} />
+              <GuideContentView content={content} envName={envName} platformName={platformName} />
             </details>
           </>
         );
@@ -176,7 +178,7 @@ function StartRun({
           <select value={platform} onChange={(e) => setPlatform(e.target.value as Platform)}>
             {app.platforms.map((p) => (
               <option key={p} value={p}>
-                {t(`platform.${p}`)}
+                {platformLabel(t, p, app.platformNames)}
               </option>
             ))}
           </select>
@@ -194,7 +196,17 @@ function StartRun({
   );
 }
 
-function RunsList({ results, envName, myId }: { results: GuideResults; envName: (k: string) => string; myId: string }) {
+function RunsList({
+  results,
+  envName,
+  platformName,
+  myId,
+}: {
+  results: GuideResults;
+  envName: (k: string) => string;
+  platformName: (k: string) => string;
+  myId: string;
+}) {
   const { t, locale } = useI18n();
   if (!results.runs.length) return null;
   const mine = results.runs.filter((r) => r.tester.id === myId);
@@ -204,7 +216,7 @@ function RunsList({ results, envName, myId }: { results: GuideResults; envName: 
       <Link to={`/runs/${run.id}`} className="list-item">
         <span className="list-title">
           {run.tester.id === myId ? "" : `${run.tester.name ?? run.tester.email} · `}
-          {envName(run.environment)} · {t(`platform.${run.platform}`)} · {run.device}
+          {envName(run.environment)} · {platformName(run.platform)} · {run.device}
         </span>
         <span className="list-meta">
           <ProgressBar counts={run.counts} />
@@ -235,7 +247,15 @@ function RunsList({ results, envName, myId }: { results: GuideResults; envName: 
 }
 
 /** Scenarios × (environment, platform), each cell a verdict with everyone's results behind it. */
-function ResultsMatrix({ results, envName }: { results: GuideResults; envName: (k: string) => string }) {
+function ResultsMatrix({
+  results,
+  envName,
+  platformName,
+}: {
+  results: GuideResults;
+  envName: (k: string) => string;
+  platformName: (k: string) => string;
+}) {
   const { t } = useI18n();
   const [open, setOpen] = useState<string | null>(null);
   const columns = results.progress.map((p) => ({ environment: p.environment, platform: p.platform, counts: p.counts }));
@@ -246,7 +266,7 @@ function ResultsMatrix({ results, envName }: { results: GuideResults; envName: (
         {columns.map((c) => (
           <div key={`${c.environment}/${c.platform}`} className="matrix-progress-item">
             <span>
-              {envName(c.environment)} · {t(`platform.${c.platform}`)}
+              {envName(c.environment)} · {platformName(c.platform)}
             </span>
             <ProgressBar counts={c.counts} />
           </div>
@@ -264,7 +284,7 @@ function ResultsMatrix({ results, envName }: { results: GuideResults; envName: (
                   <th key={`${c.environment}/${c.platform}`}>
                     {envName(c.environment)}
                     <br />
-                    <span className="muted">{t(`platform.${c.platform}`)}</span>
+                    <span className="muted">{platformName(c.platform)}</span>
                   </th>
                 ))}
               </tr>
@@ -295,12 +315,22 @@ function ResultsMatrix({ results, envName }: { results: GuideResults; envName: (
           </table>
         </div>
       )}
-      {open && <CellDetails results={results} id={open} envName={envName} />}
+      {open && <CellDetails results={results} id={open} envName={envName} platformName={platformName} />}
     </>
   );
 }
 
-function CellDetails({ results, id, envName }: { results: GuideResults; id: string; envName: (k: string) => string }) {
+function CellDetails({
+  results,
+  id,
+  envName,
+  platformName,
+}: {
+  results: GuideResults;
+  id: string;
+  envName: (k: string) => string;
+  platformName: (k: string) => string;
+}) {
   const { t, locale } = useI18n();
   const [key, environment, platform] = id.split("/");
   const scenario = results.scenarios.find((s) => s.key === key);
@@ -309,7 +339,7 @@ function CellDetails({ results, id, envName }: { results: GuideResults; id: stri
   return (
     <div className="card section-gap-sm">
       <h3>
-        {scenario.title} · {envName(cell.environment)} · {t(`platform.${cell.platform}`)}
+        {scenario.title} · {envName(cell.environment)} · {platformName(cell.platform)}
       </h3>
       {cell.results.length === 0 ? (
         <p className="muted">{t("guide.cellEmpty")}</p>
@@ -331,7 +361,15 @@ function CellDetails({ results, id, envName }: { results: GuideResults; id: stri
   );
 }
 
-export function GuideContentView({ content, envName }: { content: GuideContent; envName: (k: string) => string }) {
+export function GuideContentView({
+  content,
+  envName,
+  platformName,
+}: {
+  content: GuideContent;
+  envName: (k: string) => string;
+  platformName: (k: string) => string;
+}) {
   const { t } = useI18n();
   return (
     <div className="stack">
@@ -364,7 +402,7 @@ export function GuideContentView({ content, envName }: { content: GuideContent; 
         <ol className="scenarios">
           {content.scenarios.map((s) => (
             <li key={s.key} className={s.deprecated ? "deprecated" : undefined}>
-              <ScenarioBody scenario={s} envName={envName} />
+              <ScenarioBody scenario={s} envName={envName} platformName={platformName} />
             </li>
           ))}
         </ol>
@@ -401,10 +439,18 @@ export function Prerequisites({ content, heading = true }: { content: GuideConte
   );
 }
 
-export function ScenarioBody({ scenario, envName }: { scenario: Scenario; envName: (k: string) => string }) {
+export function ScenarioBody({
+  scenario,
+  envName,
+  platformName,
+}: {
+  scenario: Scenario;
+  envName: (k: string) => string;
+  platformName: (k: string) => string;
+}) {
   const { t } = useI18n();
   const limits = [
-    ...(scenario.platforms ?? []).map((p) => t(`platform.${p}`)),
+    ...(scenario.platforms ?? []).map(platformName),
     ...(scenario.environments ?? []).map(envName),
   ];
   return (

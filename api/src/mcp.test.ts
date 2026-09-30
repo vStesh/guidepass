@@ -179,7 +179,7 @@ describe("MCP tools", () => {
   it("only sees its own team's data", async () => {
     // A second team with its own app and guide, created directly in the database.
     const [other] = await db.insert(teams).values({ name: "Other" }).returning();
-    const [otherApp] = await db.insert(apps).values({ teamId: other!.id, slug: "other", name: "Other", platforms: ["web"] }).returning();
+    const [otherApp] = await db.insert(apps).values({ teamId: other!.id, slug: "other", name: "Other", platforms: ["ios", "android"] }).returning();
     await db.insert(users).values({ id: "other-owner", email: "other@example.com" });
     const { guideId: otherGuide } = await uploadGuide(db, {
       teamId: other!.id,

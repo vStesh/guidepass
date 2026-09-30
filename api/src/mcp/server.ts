@@ -79,7 +79,8 @@ function buildServer({ db, guideLanguage, publicUrl }: McpDeps, agent: AgentIden
   server.registerTool(
     "list_apps",
     {
-      description: "Apps in the team with their platforms and areas (features). Call this first to find app and area ids.",
+      description:
+        "Apps in the team with their platforms and areas (features). Call this first to find app and area ids. Platform keys are the app's own: built-in ios, android, web, api (backend checked with an HTTP client, logs or the database) and custom ones named in platformNames.",
       annotations: readOnly,
     },
     () => run(async () => ({ apps: await listAppsWithAreas(db, teamId) })),
@@ -117,6 +118,7 @@ function buildServer({ db, guideLanguage, publicUrl }: McpDeps, agent: AgentIden
         status: z.enum(["active", "archived", "all"]).optional().describe("Default: active"),
         build: z.string().optional(),
         environment: z.string().optional(),
+        type: z.enum(["feature", "bugfix", "improvement", "mixed"]).optional(),
         // Progress is computed per guide, so keep pages small.
         limit: z.number().int().min(1).max(20).optional().describe("Default and maximum: 20"),
       },
@@ -160,7 +162,7 @@ function buildServer({ db, guideLanguage, publicUrl }: McpDeps, agent: AgentIden
         guideId: z.uuid(),
         version: versionNumber.optional().describe("Default: current version"),
         environment: z.string().optional(),
-        platform: z.enum(["ios", "android", "web"]).optional(),
+        platform: z.string().optional().describe("Platform key from list_apps"),
         testerId: z.string().optional(),
         filter: z.enum(["problems", "all"]).optional().describe("Default: problems"),
       },

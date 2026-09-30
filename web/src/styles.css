@@ -221,3 +221,8 @@ a.list-item:hover { border-color: var(--line-strong); box-shadow: var(--shadow);
 .run-footer { position: sticky; bottom: 0; padding: 12px 0 calc(12px + env(safe-area-inset-bottom)); background: var(--page); }
 .run-footer .button { width: 100%; padding: 12px; }
 .command { display: block; padding: 8px 10px; border-radius: 6px; background: var(--surface); color: var(--text); word-break: break-all; font-size: 0.82rem; }
+.badge-type-feature { background: var(--accent-bg); color: var(--accent-strong); }
+.badge-type-bugfix { background: var(--fail-bg); color: var(--fail); }
+.badge-type-improvement { background: var(--skip-bg); color: var(--skip); }
+.badge-type-mixed { background: var(--conflict-bg); color: var(--conflict); }
+.chip-remove { border: 0; background: none; color: inherit; cursor: pointer; font: inherit; padding: 0 0 0 2px; }

@@ -1,6 +1,17 @@
 // Types and pure helpers, safe to import in the browser (no validator).
 
-export type Platform = "ios" | "android" | "web";
+/**
+ * A platform key. Every app picks its platforms: the built-in ones below and
+ * its own (e.g. `admin`), each a lowercase kebab-case key.
+ */
+export type Platform = string;
+
+/** Built-in platforms; `api` covers backend changes checked with an HTTP client, logs or the database. */
+export const builtInPlatforms = ["ios", "android", "web", "api"] as const;
+
+/** What a guide covers, shown as a badge and used for filtering. */
+export type GuideType = "feature" | "bugfix" | "improvement" | "mixed";
+export const guideTypes: GuideType[] = ["feature", "bugfix", "improvement", "mixed"];
 
 export interface Scenario {
   key: string;
@@ -16,6 +27,7 @@ export interface Scenario {
 export interface GuideContent {
   schemaVersion: 1;
   title: string;
+  type?: GuideType;
   build?: string;
   branch?: string;
   pr?: string;

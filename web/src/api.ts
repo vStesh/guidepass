@@ -1,4 +1,4 @@
-import type { GuideContent, Platform, ResultStatus, ScenarioDiff, Verdict } from "@guidepass/schema/core";
+import type { GuideContent, GuideType, Platform, ResultStatus, ScenarioDiff, Verdict } from "@guidepass/schema/core";
 import type { Auth } from "./auth.ts";
 
 export type Role = "owner" | "tester";
@@ -33,6 +33,7 @@ export interface App {
   slug: string;
   name: string;
   platforms: Platform[];
+  platformNames: Record<string, string>;
   areas?: Area[];
 }
 
@@ -40,6 +41,7 @@ export interface GuideSummary {
   id: string;
   slug: string;
   title: string;
+  type: GuideType | null;
   areaId: string | null;
   build: string | null;
   branch: string | null;
@@ -100,6 +102,7 @@ export interface GuideResults {
 }
 
 export interface RunDetail {
+  app: Pick<App, "id" | "name" | "platforms" | "platformNames">;
   run: {
     id: string;
     guideId: string;
@@ -185,15 +188,22 @@ export function createApi(auth: Auth) {
     updateMe: (body: { name?: string; locale?: Locale }) => request<{ user: User }>("PATCH", "/me", body),
     setup: (teamName: string) => request<{ team: Me["team"] }>("POST", "/setup", { teamName }),
     environments: () => request<{ environments: Environment[] }>("GET", "/environments"),
+    createEnvironment: (key: string, name: string) =>
+      request<{ environment: Environment }>("POST", "/environments", { key, name }),
+    updateEnvironment: (key: string, body: { name?: string; archived?: boolean }) =>
+      request<{ environment: Environment }>("PATCH", `/environments/${key}`, body),
+    orderEnvironments: (keys: string[]) => request<{ keys: string[] }>("PUT", "/environments/order", { keys }),
 
     apps: () => request<{ apps: App[] }>("GET", "/apps"),
     app: (appId: string) => request<{ app: App & { areas: Area[] } }>("GET", `/apps/${appId}`),
-    createApp: (body: { slug: string; name: string; platforms: Platform[] }) =>
+    createApp: (body: { slug: string; name: string; platforms: Platform[]; platformNames: Record<string, string> }) =>
       request<{ app: App }>("POST", "/apps", body),
+    updateApp: (appId: string, body: { name?: string; platforms?: Platform[]; platformNames?: Record<string, string> }) =>
+      request<{ app: App }>("PATCH", `/apps/${appId}`, body),
     createArea: (appId: string, body: { slug: string; name: string }) =>
       request<{ area: Area }>("POST", `/apps/${appId}/areas`, body),
 
-    guides: (appId: string, params: { areaId?: string; status?: string; environment?: string } = {}) =>
+    guides: (appId: string, params: { areaId?: string; status?: string; environment?: string; type?: string } = {}) =>
       request<{ guides: GuideSummary[] }>("GET", `/apps/${appId}/guides${query({ ...params, limit: 100 })}`),
     guide: (guideId: string, version?: number) =>
       request<GuideDetail>("GET", `/guides/${guideId}${query({ version })}`),

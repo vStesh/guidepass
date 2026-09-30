@@ -12,7 +12,7 @@ export const runRoutes = new Hono<AppEnv>();
 
 const guideParam = validate("param", z.object({ guideId: z.uuid() }));
 const runParam = validate("param", z.object({ runId: z.uuid() }));
-const platform = z.enum(["ios", "android", "web"]);
+const platform = z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/).max(30);
 
 /** Start testing the current version of a guide in one environment, on one platform and device. */
 runRoutes.post(
@@ -80,7 +80,13 @@ runRoutes.get(
 async function loadRun(c: Parameters<typeof requireMembership>[0], runId: string) {
   const { teamId } = await requireMembership(c);
   const [row] = await c.var.db
-    .select({ run: runs, version: guideVersions.version, content: guideVersions.content, guideId: guides.id })
+    .select({
+      run: runs,
+      version: guideVersions.version,
+      content: guideVersions.content,
+      guideId: guides.id,
+      app: { id: apps.id, name: apps.name, platforms: apps.platforms, platformNames: apps.platformNames },
+    })
     .from(runs)
     .innerJoin(guideVersions, eq(guideVersions.id, runs.guideVersionId))
     .innerJoin(guides, eq(guides.id, guideVersions.guideId))
@@ -95,6 +101,7 @@ runRoutes.get("/runs/:runId", runParam, async (c) => {
   const rows = await c.var.db.select().from(results).where(eq(results.runId, row.run.id));
   return c.json({
     run: { ...row.run, version: row.version, guideId: row.guideId },
+    app: row.app,
     content: row.content,
     results: rows,
     counts: countRun(row.content, row.run.environmentKey, row.run.platform, rows),

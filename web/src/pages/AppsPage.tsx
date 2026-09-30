@@ -1,11 +1,9 @@
 import { useState, type FormEvent } from "react";
 import { Link } from "react-router";
-import type { Platform } from "@guidepass/schema/core";
-import { Chip, ErrorBox, Load, slugify } from "../components/ui.tsx";
+import { PlatformsEditor, type PlatformsValue } from "../components/PlatformsEditor.tsx";
+import { Chip, ErrorBox, Load, platformLabel, slugify } from "../components/ui.tsx";
 import { useI18n } from "../i18n/index.tsx";
 import { isOwner, useLoad, useSession } from "../session.tsx";
-
-const allPlatforms: Platform[] = ["ios", "android", "web"];
 
 export function AppsPage() {
   const { t } = useI18n();
@@ -43,7 +41,7 @@ export function AppsPage() {
                     <span className="list-meta">
                       <code>{app.slug}</code>
                       {app.platforms.map((p) => (
-                        <Chip key={p}>{t(`platform.${p}`)}</Chip>
+                        <Chip key={p}>{platformLabel(t, p, app.platformNames)}</Chip>
                       ))}
                     </span>
                   </Link>
@@ -65,7 +63,7 @@ function NewAppForm({ onDone, onCancel }: { onDone: () => void; onCancel: () => 
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
   const [slugTouched, setSlugTouched] = useState(false);
-  const [platforms, setPlatforms] = useState<Platform[]>(["ios", "android"]);
+  const [platforms, setPlatforms] = useState<PlatformsValue>({ platforms: ["ios", "android"], platformNames: {} });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
 
@@ -74,7 +72,7 @@ function NewAppForm({ onDone, onCancel }: { onDone: () => void; onCancel: () => 
     setBusy(true);
     setError(null);
     try {
-      await api.createApp({ name, slug, platforms });
+      await api.createApp({ name, slug, ...platforms });
       onDone();
     } catch (err) {
       setError(err);
@@ -109,24 +107,10 @@ function NewAppForm({ onDone, onCancel }: { onDone: () => void; onCancel: () => 
         />
         <small className="muted">{t("apps.slugHint")}</small>
       </label>
-      <fieldset className="field">
-        <legend>{t("apps.platforms")}</legend>
-        <div className="row">
-          {allPlatforms.map((p) => (
-            <label key={p} className="check">
-              <input
-                type="checkbox"
-                checked={platforms.includes(p)}
-                onChange={(e) => setPlatforms(e.target.checked ? [...platforms, p] : platforms.filter((x) => x !== p))}
-              />
-              {t(`platform.${p}`)}
-            </label>
-          ))}
-        </div>
-      </fieldset>
+      <PlatformsEditor value={platforms} onChange={setPlatforms} />
       {error ? <ErrorBox error={error} /> : null}
       <div className="row">
-        <button type="submit" className="button button-primary" disabled={busy || !platforms.length}>
+        <button type="submit" className="button button-primary" disabled={busy || !platforms.platforms.length}>
           {t("app.create")}
         </button>
         <button type="button" className="button" onClick={onCancel}>

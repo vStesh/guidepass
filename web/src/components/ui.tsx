@@ -1,8 +1,9 @@
 import DOMPurify from "dompurify";
 import { marked } from "marked";
 import { useMemo, type ReactNode } from "react";
-import type { Verdict } from "@guidepass/schema/core";
-import { errorMessage, useI18n } from "../i18n/index.tsx";
+import type { GuideType, Verdict } from "@guidepass/schema/core";
+import { errorMessage, useI18n, type Translate } from "../i18n/index.tsx";
+import { en, type MessageKey } from "../i18n/en.ts";
 import type { Loaded } from "../session.tsx";
 
 /**
@@ -80,10 +81,32 @@ export function formatDate(value: string | Date, locale: string) {
   }).format(new Date(value));
 }
 
-export const slugify = (text: string) =>
-  text
-    .toLowerCase()
+// Ukrainian to Latin (the official 2010 transliteration, simplified), so keys made
+// from Ukrainian names stay readable: «Адмінка» → adminka.
+const ukrainian: Record<string, string> = {
+  а: "a", б: "b", в: "v", г: "h", ґ: "g", д: "d", е: "e", є: "ie", ж: "zh", з: "z", и: "y", і: "i", ї: "i", й: "i",
+  к: "k", л: "l", м: "m", н: "n", о: "o", п: "p", р: "r", с: "s", т: "t", у: "u", ф: "f", х: "kh", ц: "ts",
+  ч: "ch", ш: "sh", щ: "shch", ь: "", ю: "iu", я: "ia", "'": "", "ʼ": "", "’": "",
+};
+
+/** Lowercase kebab-case key of at most `max` characters, never ending in a dash. */
+export const slugify = (text: string, max = 80) =>
+  [...text.toLowerCase()]
+    .map((ch) => ukrainian[ch] ?? ch)
+    .join("")
     .normalize("NFKD")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
-    .slice(0, 80);
+    .slice(0, max)
+    .replace(/-+$/, "");
+
+/** Built-in platforms are translated; an app's own platforms use the name the owner gave them. */
+export function platformLabel(t: Translate, key: string, names?: Record<string, string>): string {
+  const messageKey = `platform.${key}`;
+  return messageKey in en ? t(messageKey as MessageKey) : (names?.[key] ?? key);
+}
+
+export function TypeBadge({ type }: { type: GuideType }) {
+  const { t } = useI18n();
+  return <span className={`badge badge-type-${type}`}>{t(`type.${type}`)}</span>;
+}

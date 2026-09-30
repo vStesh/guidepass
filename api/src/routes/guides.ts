@@ -20,6 +20,7 @@ guideRoutes.get(
       status: z.enum(["active", "archived", "all"]).default("active"),
       build: z.string().optional(),
       environment: z.string().optional(),
+      type: z.enum(["feature", "bugfix", "improvement", "mixed"]).optional(),
       limit: z.coerce.number().int().min(1).max(100).default(20),
     }),
   ),

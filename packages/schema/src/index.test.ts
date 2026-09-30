@@ -39,6 +39,22 @@ describe("validateGuide", () => {
   });
 });
 
+describe("platforms and type", () => {
+  it("accepts custom platform keys the app has, and rejects others", () => {
+    const content = structuredClone(example) as GuideContent;
+    content.scenarios[1]!.platforms = ["admin"];
+    expect(validateGuide(content, { environments, platforms: ["ios", "android", "admin"] }).ok).toBe(true);
+    const result = validateGuide(content, { environments, platforms: ["ios", "android"] });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.errors[0]!.path).toBe("/scenarios/1/platforms/0");
+  });
+
+  it("checks the guide type", () => {
+    expect(validateGuide({ ...example, type: "bugfix" }, { environments }).ok).toBe(true);
+    expect(validateGuide({ ...example, type: "hotfix" }, { environments }).ok).toBe(false);
+  });
+});
+
 describe("diffScenarios", () => {
   it("classifies scenarios by key", () => {
     const previous = structuredClone(example) as GuideContent;
