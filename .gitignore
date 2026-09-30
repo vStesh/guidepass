@@ -14,6 +14,8 @@ coverage/
 *.tfstate.*
 *.tfvars
 !*.tfvars.example
+# Per-instance state backends (see infra/backends/example.s3.tfbackend.example)
+*.tfbackend
 crash.log
 
 # IDE

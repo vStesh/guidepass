@@ -1,6 +1,5 @@
-# Copy to <instance>.tfvars (ignored by git) and run:
-#   terraform workspace new <instance>
-#   terraform apply -var-file=<instance>.tfvars
+# Copy to <instance>.tfvars (ignored by git), add backends/<instance>.s3.tfbackend,
+# then: AWS_PROFILE=<profile> ./tf.sh <instance> plan
 
 name_prefix = "gp-schoolplus"
 owner_email = "you@example.com"

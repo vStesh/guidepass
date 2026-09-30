@@ -12,8 +12,10 @@ terraform {
     }
   }
 
-  # State is local by default. For anything shared, use an S3 backend:
-  # copy backend.tf.example to backend.tf and run `terraform init -reconfigure`.
+  # State lives in S3, one bucket per AWS account and one key per instance.
+  # The bucket, key and region come from backends/<instance>.s3.tfbackend;
+  # ./tf.sh <instance> <command> picks the right one (see README).
+  backend "s3" {}
 }
 
 provider "aws" {
