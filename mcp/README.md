@@ -6,14 +6,13 @@ The code lives in `api/src/mcp/` and runs in the API Lambda: `/mcp` next to `/ap
 
 ## Connect an agent
 
-1. A team owner creates a token on the **Team** page (**AI agent tokens**): *Read* for analysis only, *Read and write* to upload guides. The token is shown once.
-2. Add the server to Claude Code:
+Step by step, for owners and testers: [docs/connect-agent.md](../docs/connect-agent.md). In short: an owner creates a token on the Team page, then
 
-   ```bash
-   claude mcp add --transport http guidepass https://gp.example.com/mcp --header "Authorization: Bearer gp_..."
-   ```
+```bash
+claude mcp add --scope user --transport http guidepass https://gp.example.com/mcp --header "Authorization: Bearer gp_..."
+```
 
-The page shows this command with your instance's address and the new token filled in. Revoking a token cuts access immediately.
+and a new Claude Code session picks it up.
 
 ## Tools
 

@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import type { Role } from "../api.ts";
 import { AgentTokens } from "../components/AgentTokens.tsx";
+import { ConnectAgentGuide } from "../components/ConnectAgentGuide.tsx";
 import { ErrorBox, Load, formatDate } from "../components/ui.tsx";
 import { useI18n } from "../i18n/index.tsx";
 import { isOwner, useLoad, useSession } from "../session.tsx";
@@ -92,6 +93,13 @@ export function TeamPage() {
           </>
         )}
       </Load>
+      <details className="card section-gap">
+        <summary>
+          <h2>{t("connect.title")}</h2>
+        </summary>
+        <p className="muted">{owner ? t("connect.introOwner") : t("connect.introTester")}</p>
+        <ConnectAgentGuide />
+      </details>
     </>
   );
 }

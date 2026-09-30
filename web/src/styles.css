@@ -227,3 +227,7 @@ a.list-item:hover { border-color: var(--line-strong); box-shadow: var(--shadow);
 .badge-type-mixed { background: var(--conflict-bg); color: var(--conflict); }
 .chip-remove { border: 0; background: none; color: inherit; cursor: pointer; font: inherit; padding: 0 0 0 2px; }
 .filter-search { flex: 1 1 220px; }
+.connect-steps { margin: 0; padding-left: 1.3rem; display: flex; flex-direction: column; gap: 12px; }
+.connect-steps p { margin: 4px 0; }
+.connect-steps .button { margin-top: 6px; }
+.connect-steps ul { margin: 4px 0 0; padding-left: 1.1rem; }
