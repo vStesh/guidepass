@@ -4,7 +4,8 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { requireMembership, type AppEnv } from "../context.ts";
 import { builtInPlatforms } from "@guidepass/schema/core";
-import { apps, guideVersions, guides, runs } from "../db/schema.ts";
+import { apps, guideVersions, guides, runs, slackEvents, type SlackEvent } from "../db/schema.ts";
+import { isSlackWebhook, publicApp, sendTestNotification } from "../services/notifications.ts";
 import { createArea, getApp } from "../services/catalog.ts";
 import { ApiError, isUniqueViolation } from "../errors.ts";
 
@@ -34,7 +35,7 @@ function ownPlatformNames(platforms: string[], names: Record<string, string>): R
 appRoutes.get("/apps", async (c) => {
   const { teamId } = await requireMembership(c);
   const rows = await c.var.db.select().from(apps).where(eq(apps.teamId, teamId)).orderBy(asc(apps.name));
-  return c.json({ apps: rows });
+  return c.json({ apps: rows.map(publicApp) });
 });
 
 appRoutes.post(
@@ -58,7 +59,7 @@ appRoutes.post(
         .insert(apps)
         .values({ ...body, platforms, platformNames: names, teamId })
         .returning();
-      return c.json({ app: created }, 201);
+      return c.json({ app: publicApp(created!) }, 201);
     } catch (err) {
       if (isUniqueViolation(err)) throw new ApiError("conflict", `App ${body.slug} already exists.`);
       throw err;
@@ -68,7 +69,7 @@ appRoutes.post(
 
 appRoutes.get("/apps/:appId", appParam, async (c) => {
   const { teamId } = await requireMembership(c);
-  return c.json({ app: await getApp(c.var.db, teamId, c.req.valid("param").appId) });
+  return c.json({ app: publicApp(await getApp(c.var.db, teamId, c.req.valid("param").appId)) });
 });
 
 /** Rename an app or change its platforms. A platform that already has runs can't be removed. */
@@ -81,6 +82,13 @@ appRoutes.patch(
       name: z.string().trim().min(1).max(100).optional(),
       platforms: z.array(platformKey).min(1).max(12).optional(),
       platformNames: platformNames.optional(),
+      slack: z
+        .object({
+          // null removes the webhook.
+          webhookUrl: z.string().trim().max(500).refine(isSlackWebhook, "must be a Slack Incoming Webhook URL (https://hooks.slack.com/services/…)").nullable().optional(),
+          events: z.array(z.enum(slackEvents as [SlackEvent, ...SlackEvent[]])).optional(),
+        })
+        .optional(),
     }),
   ),
   async (c) => {
@@ -125,14 +133,35 @@ appRoutes.patch(
       }
     }
 
+    const slack = body.slack
+      ? {
+          ...(body.slack.webhookUrl !== undefined ? { slackWebhookUrl: body.slack.webhookUrl } : {}),
+          ...(body.slack.events ? { slackEvents: [...new Set(body.slack.events)] } : {}),
+        }
+      : {};
     const [updated] = await c.var.db
       .update(apps)
-      .set({ name: body.name ?? app.name, platforms, platformNames: names })
+      .set({ name: body.name ?? app.name, platforms, platformNames: names, ...slack })
       .where(eq(apps.id, app.id))
       .returning();
-    return c.json({ app: updated });
+    return c.json({ app: publicApp(updated!) });
   },
 );
+
+/** Owner check that the webhook works; reports Slack's answer instead of hiding it. */
+appRoutes.post("/apps/:appId/slack/test", appParam, async (c) => {
+  const { teamId } = await requireMembership(c, "owner");
+  const app = await getApp(c.var.db, teamId, c.req.valid("param").appId);
+  try {
+    if (!(await sendTestNotification(c.var.notifications, app))) {
+      throw new ApiError("invalid", "This app has no Slack webhook yet.");
+    }
+  } catch (err) {
+    if (err instanceof ApiError) throw err;
+    throw new ApiError("invalid", `Slack didn't accept the message: ${(err as Error).message}`);
+  }
+  return c.json({ sent: true });
+});
 
 appRoutes.post(
   "/apps/:appId/areas",

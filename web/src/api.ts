@@ -11,6 +11,8 @@ export interface User {
   locale: Locale;
 }
 
+export type SlackEvent = "guide_created" | "guide_updated" | "run_problems";
+
 export interface Me {
   user: User;
   team: { id: string; name: string; role: Role } | null;
@@ -34,6 +36,7 @@ export interface App {
   name: string;
   platforms: Platform[];
   platformNames: Record<string, string>;
+  slack: { configured: boolean; events: SlackEvent[] };
   areas?: Area[];
 }
 
@@ -198,8 +201,16 @@ export function createApi(auth: Auth) {
     app: (appId: string) => request<{ app: App & { areas: Area[] } }>("GET", `/apps/${appId}`),
     createApp: (body: { slug: string; name: string; platforms: Platform[]; platformNames: Record<string, string> }) =>
       request<{ app: App }>("POST", "/apps", body),
-    updateApp: (appId: string, body: { name?: string; platforms?: Platform[]; platformNames?: Record<string, string> }) =>
-      request<{ app: App }>("PATCH", `/apps/${appId}`, body),
+    updateApp: (
+      appId: string,
+      body: {
+        name?: string;
+        platforms?: Platform[];
+        platformNames?: Record<string, string>;
+        slack?: { webhookUrl?: string | null; events?: SlackEvent[] };
+      },
+    ) => request<{ app: App }>("PATCH", `/apps/${appId}`, body),
+    testSlack: (appId: string) => request<{ sent: boolean }>("POST", `/apps/${appId}/slack/test`),
     createArea: (appId: string, body: { slug: string; name: string }) =>
       request<{ area: Area }>("POST", `/apps/${appId}/areas`, body),
 

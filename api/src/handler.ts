@@ -25,6 +25,8 @@ const api = createApp({
     manageUsers: process.env.COGNITO_MANAGE_USERS === "true",
   }),
   ownerEmail: required("OWNER_EMAIL"),
+  publicUrl: required("PUBLIC_URL"),
+  guideLanguage: process.env.GUIDE_LANGUAGE || "en",
 });
 
 const mcp = createMcpHandler({

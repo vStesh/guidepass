@@ -3,7 +3,9 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { requireMembership, type AppEnv } from "../context.ts";
 import { getGuideDetail, listGuides, setGuideStatus } from "../services/catalog.ts";
+import type { GuideContent } from "@guidepass/schema";
 import { uploadGuide } from "../services/guides.ts";
+import { announceGuideUpload } from "../services/notifications.ts";
 
 export const guideRoutes = new Hono<AppEnv>();
 
@@ -47,12 +49,20 @@ guideRoutes.post(
   async (c) => {
     const { teamId } = await requireMembership(c, "owner");
     const body = c.req.valid("json");
-    const result = await uploadGuide(c.var.db, {
-      ...body,
-      teamId,
-      appId: c.req.valid("param").appId,
-      author: { userId: c.var.user.id },
-    });
+    const appId = c.req.valid("param").appId;
+    const author = { userId: c.var.user.id };
+    const result = await uploadGuide(c.var.db, { ...body, teamId, appId, author });
+    if (!result.dryRun && result.guideId) {
+      await announceGuideUpload(c.var.notifications, {
+        appId,
+        guideId: result.guideId,
+        version: result.version,
+        content: body.content as GuideContent,
+        changeNote: body.changeNote,
+        diff: result.diff,
+        author,
+      });
+    }
     return c.json(result, result.dryRun ? 200 : 201);
   },
 );

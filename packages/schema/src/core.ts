@@ -55,7 +55,11 @@ export function sameCheck(a: Scenario, b: Scenario): boolean {
   return pick(a) === pick(b);
 }
 
-/** Compares scenarios of two guide versions by key. */
+/**
+ * Compares scenarios of two guide versions by key. `added` and `changed` are the
+ * active scenarios that need testing again; `deprecated` are those nobody tests
+ * in the new version; `removed` are gone.
+ */
 export function diffScenarios(previous: GuideContent | null, next: GuideContent): ScenarioDiff {
   const diff: ScenarioDiff = { added: [], changed: [], deprecated: [], removed: [], unchanged: [] };
   const before = new Map((previous?.scenarios ?? []).map((s) => [s.key, s]));
@@ -64,9 +68,11 @@ export function diffScenarios(previous: GuideContent | null, next: GuideContent)
     const old = before.get(scenario.key);
     before.delete(scenario.key);
     if (!old) diff.added.push(scenario.key);
-    else if (scenario.deprecated && !old.deprecated) diff.deprecated.push(scenario.key);
-    else if (sameCheck(old, scenario)) diff.unchanged.push(scenario.key);
-    else diff.changed.push(scenario.key);
+    // Deprecated in the new version, whether newly or still: nobody tests it.
+    else if (scenario.deprecated) diff.deprecated.push(scenario.key);
+    // Brought back from deprecation: results from before don't count, so it's tested again.
+    else if (old.deprecated || !sameCheck(old, scenario)) diff.changed.push(scenario.key);
+    else diff.unchanged.push(scenario.key);
   }
   diff.removed.push(...before.keys());
   return diff;

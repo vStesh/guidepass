@@ -90,6 +90,9 @@ export const environments = pgTable("environments", {
   archived: boolean("archived").notNull().default(false),
 });
 
+export type SlackEvent = "guide_created" | "guide_updated" | "run_problems";
+export const slackEvents: SlackEvent[] = ["guide_created", "guide_updated", "run_problems"];
+
 export const apps = pgTable(
   "apps",
   {
@@ -100,6 +103,9 @@ export const apps = pgTable(
     platforms: jsonb("platforms").$type<Platform[]>().notNull(),
     /** Display names of the app's own platforms (built-in ones are translated in the UI). */
     platformNames: jsonb("platform_names").$type<Record<string, string>>().notNull().default({}),
+    /** Slack Incoming Webhook for this app's notifications. A secret: never returned by the API. */
+    slackWebhookUrl: text("slack_webhook_url"),
+    slackEvents: jsonb("slack_events").$type<SlackEvent[]>().notNull().default(["guide_created", "guide_updated"]),
     createdAt: createdAt(),
   },
   (t) => [unique().on(t.teamId, t.slug)],

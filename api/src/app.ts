@@ -4,6 +4,7 @@ import type { Authenticator } from "./auth.ts";
 import type { AppEnv } from "./context.ts";
 import type { Db } from "./db/client.ts";
 import type { UserDirectory } from "./directory.ts";
+import { slackNotifier, type Notifier } from "./services/notifications.ts";
 import { users, type Locale } from "./db/schema.ts";
 import { ApiError } from "./errors.ts";
 import { agentTokenRoutes } from "./routes/agentTokens.ts";
@@ -18,6 +19,12 @@ export interface AppDeps {
   authenticate: Authenticator;
   directory: UserDirectory;
   ownerEmail?: string;
+  /** Sends Slack messages; defaults to the real webhook call. */
+  notifier?: Notifier;
+  /** Base URL of the web app, for links in notifications. */
+  publicUrl?: string;
+  /** Instance guide language, also used for notifications. */
+  guideLanguage?: string;
 }
 
 /** `uk` when the browser prefers Ukrainian, otherwise English. */
@@ -26,7 +33,16 @@ export function preferredLocale(acceptLanguage: string | undefined): Locale {
   return first.startsWith("uk") ? "uk" : "en";
 }
 
-export function createApp({ db, authenticate, directory, ownerEmail }: AppDeps) {
+export function createApp({
+  db,
+  authenticate,
+  directory,
+  ownerEmail,
+  notifier = slackNotifier,
+  publicUrl = "http://localhost:5173",
+  guideLanguage = "en",
+}: AppDeps) {
+  const notifications = { db, notify: notifier, publicUrl, language: guideLanguage };
   const app = new Hono<AppEnv>();
 
   app.onError((err, c) => {
@@ -62,6 +78,7 @@ export function createApp({ db, authenticate, directory, ownerEmail }: AppDeps) 
     c.set("db", db);
     c.set("ownerEmail", ownerEmail);
     c.set("directory", directory);
+    c.set("notifications", notifications);
     c.set("user", user!);
     await next();
   });

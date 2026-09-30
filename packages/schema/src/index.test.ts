@@ -67,10 +67,17 @@ describe("diffScenarios", () => {
     expect(diffScenarios(previous, next)).toEqual({
       added: ["new-check"],
       changed: ["reply-to-comment"],
-      deprecated: ["android-keyboard"],
+      deprecated: ["android-keyboard", "pull-to-retry"],
       removed: ["old-backend-flat-list"],
-      unchanged: ["pull-to-retry"],
+      unchanged: [],
     });
+  });
+
+  it("treats a scenario brought back from deprecation as changed", () => {
+    const previous = structuredClone(example) as GuideContent;
+    const next = structuredClone(example) as GuideContent;
+    delete next.scenarios[2]!.deprecated;
+    expect(diffScenarios(previous, next).changed).toContain("pull-to-retry");
   });
 
   it("treats every scenario as added for a new guide", () => {

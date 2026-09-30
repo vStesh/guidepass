@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
-import { guideSchema } from "@guidepass/schema";
+import { guideSchema, type GuideContent } from "@guidepass/schema";
 import { asc } from "drizzle-orm";
 import { z } from "zod";
 import type { Db } from "../db/client.ts";
@@ -11,6 +11,7 @@ import { ApiError } from "../errors.ts";
 import { authenticateAgent, type AgentIdentity } from "../services/agentTokens.ts";
 import { createArea, getGuideDetail, listAppsWithAreas, listGuides, setGuideStatus } from "../services/catalog.ts";
 import { uploadGuide } from "../services/guides.ts";
+import { announceGuideUpload, slackNotifier, type Notifier } from "../services/notifications.ts";
 import { getGuideResults, loadGuide } from "../services/results.ts";
 
 export interface McpDeps {
@@ -19,6 +20,8 @@ export interface McpDeps {
   guideLanguage: string;
   /** Base URL of the web app, for links to guides. */
   publicUrl: string;
+  /** Sends Slack messages; defaults to the real webhook call. */
+  notifier?: Notifier;
 }
 
 const SERVER_INSTRUCTIONS = `Guidepass holds manual test guides for app builds and the results people record on their devices.
@@ -66,7 +69,7 @@ async function run(fn: () => Promise<unknown>) {
 
 const versionNumber = z.number().int().min(1).max(2_147_483_647);
 
-function buildServer({ db, guideLanguage, publicUrl }: McpDeps, agent: AgentIdentity): McpServer {
+function buildServer({ db, guideLanguage, publicUrl, notifier }: McpDeps, agent: AgentIdentity): McpServer {
   const server = new McpServer({ name: "guidepass", version: "0.1.0" }, { instructions: SERVER_INSTRUCTIONS });
   const { teamId } = agent;
   const guideUrl = (id: string) => `${publicUrl}/guides/${id}`;
@@ -212,7 +215,22 @@ function buildServer({ db, guideLanguage, publicUrl }: McpDeps, agent: AgentIden
     (input) =>
       run(async () => {
         requireWrite("upload_guide");
-        const result = await uploadGuide(db, { ...input, teamId, author: { tokenId: agent.tokenId } });
+        const author = { tokenId: agent.tokenId };
+        const result = await uploadGuide(db, { ...input, teamId, author });
+        if (!result.dryRun && result.guideId) {
+          await announceGuideUpload(
+            { db, notify: notifier ?? slackNotifier, publicUrl, language: guideLanguage },
+            {
+              appId: input.appId,
+              guideId: result.guideId,
+              version: result.version,
+              content: input.content as unknown as GuideContent,
+              changeNote: input.changeNote,
+              diff: result.diff,
+              author,
+            },
+          );
+        }
         return { ...result, url: result.guideId ? guideUrl(result.guideId) : null };
       }),
   );

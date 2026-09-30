@@ -1,10 +1,11 @@
 import { appliesTo } from "@guidepass/schema";
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNotNull, isNull } from "drizzle-orm";
 import { Hono } from "hono";
 import { z } from "zod";
 import { requireMembership, type AppEnv } from "../context.ts";
 import { apps, guideVersions, guides, results, runs } from "../db/schema.ts";
 import { ApiError } from "../errors.ts";
+import { announceRunProblems } from "../services/notifications.ts";
 import { countRun, getGuideResults, loadGuide } from "../services/results.ts";
 import { validate } from "../validate.ts";
 
@@ -158,11 +159,29 @@ runRoutes.patch(
   async (c) => {
     const row = await loadRun(c, c.req.valid("param").runId);
     if (row.run.testerId !== c.var.user.id) throw new ApiError("forbidden", "You can only change your own runs.");
-    const [run] = await c.var.db
+    const finished = c.req.valid("json").finished;
+    // Finishing only updates a run that isn't finished yet, so a double tap
+    // (or a retried request) finishes it, and notifies, exactly once.
+    const [changed] = await c.var.db
       .update(runs)
-      .set({ finishedAt: c.req.valid("json").finished ? new Date() : null })
-      .where(eq(runs.id, row.run.id))
+      .set({ finishedAt: finished ? new Date() : null })
+      .where(and(eq(runs.id, row.run.id), finished ? isNull(runs.finishedAt) : isNotNull(runs.finishedAt)))
       .returning();
+    const run = changed ?? row.run;
+    if (finished && changed) {
+      const rows = await c.var.db.select().from(results).where(eq(results.runId, row.run.id));
+      await announceRunProblems(c.var.notifications, {
+        appId: row.app.id,
+        guideId: row.guideId,
+        guideTitle: row.content.title,
+        runId: row.run.id,
+        tester: c.var.user.name ?? c.var.user.email.split("@")[0]!,
+        environment: row.run.environmentKey,
+        platform: row.run.platform,
+        device: row.run.device,
+        counts: countRun(row.content, row.run.environmentKey, row.run.platform, rows),
+      });
+    }
     return c.json({ run });
   },
 );
