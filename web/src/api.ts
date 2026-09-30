@@ -45,6 +45,8 @@ export interface GuideSummary {
   slug: string;
   title: string;
   type: GuideType | null;
+  appId: string;
+  appName: string;
   areaId: string | null;
   build: string | null;
   branch: string | null;
@@ -53,6 +55,18 @@ export interface GuideSummary {
   status: "active" | "archived";
   currentVersion: number;
   updatedAt: string;
+}
+
+export interface GuideListParams {
+  appId?: string;
+  areaId?: string;
+  status?: string;
+  environment?: string;
+  type?: string;
+  q?: string;
+  limit?: number;
+  offset?: number;
+  [key: string]: string | number | undefined;
 }
 
 export interface GuideDetail {
@@ -214,6 +228,8 @@ export function createApi(auth: Auth) {
     createArea: (appId: string, body: { slug: string; name: string }) =>
       request<{ area: Area }>("POST", `/apps/${appId}/areas`, body),
 
+    allGuides: (params: GuideListParams = {}) =>
+      request<{ guides: GuideSummary[] }>("GET", `/guides${query(params)}`),
     guides: (appId: string, params: { areaId?: string; status?: string; environment?: string; type?: string } = {}) =>
       request<{ guides: GuideSummary[] }>("GET", `/apps/${appId}/guides${query({ ...params, limit: 100 })}`),
     guide: (guideId: string, version?: number) =>

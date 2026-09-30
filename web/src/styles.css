@@ -226,3 +226,4 @@ a.list-item:hover { border-color: var(--line-strong); box-shadow: var(--shadow);
 .badge-type-improvement { background: var(--skip-bg); color: var(--skip); }
 .badge-type-mixed { background: var(--conflict-bg); color: var(--conflict); }
 .chip-remove { border: 0; background: none; color: inherit; cursor: pointer; font: inherit; padding: 0 0 0 2px; }
+.filter-search { flex: 1 1 220px; }

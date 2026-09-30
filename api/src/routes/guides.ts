@@ -12,23 +12,30 @@ export const guideRoutes = new Hono<AppEnv>();
 const appParam = validate("param", z.object({ appId: z.uuid() }));
 const guideParam = validate("param", z.object({ guideId: z.uuid() }));
 
+const listQuery = {
+  areaId: z.uuid().optional(),
+  status: z.enum(["active", "archived", "all"]).default("active"),
+  build: z.string().optional(),
+  environment: z.string().optional(),
+  type: z.enum(["feature", "bugfix", "improvement", "mixed"]).optional(),
+  q: z.string().trim().max(100).optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  offset: z.coerce.number().int().min(0).max(100_000).default(0),
+};
+
+/** Every guide the person's team has, across apps: the home page. */
+guideRoutes.get("/guides", validate("query", z.object({ ...listQuery, appId: z.uuid().optional() })), async (c) => {
+  const { teamId } = await requireMembership(c);
+  return c.json({ guides: await listGuides(c.var.db, teamId, c.req.valid("query")) });
+});
+
 guideRoutes.get(
   "/apps/:appId/guides",
   appParam,
-  validate(
-    "query",
-    z.object({
-      areaId: z.uuid().optional(),
-      status: z.enum(["active", "archived", "all"]).default("active"),
-      build: z.string().optional(),
-      environment: z.string().optional(),
-      type: z.enum(["feature", "bugfix", "improvement", "mixed"]).optional(),
-      limit: z.coerce.number().int().min(1).max(100).default(20),
-    }),
-  ),
+  validate("query", z.object(listQuery)),
   async (c) => {
     const { teamId } = await requireMembership(c);
-    return c.json({ guides: await listGuides(c.var.db, teamId, c.req.valid("param").appId, c.req.valid("query")) });
+    return c.json({ guides: await listGuides(c.var.db, teamId, { ...c.req.valid("query"), appId: c.req.valid("param").appId }) });
   },
 );
 

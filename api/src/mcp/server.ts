@@ -129,7 +129,7 @@ function buildServer({ db, guideLanguage, publicUrl, notifier }: McpDeps, agent:
     },
     ({ appId, ...filters }) =>
       run(async () => {
-        const rows = await listGuides(db, teamId, appId, filters);
+        const rows = await listGuides(db, teamId, { ...filters, appId });
         const guides = [];
         for (const row of rows) {
           const { guide, app } = await loadGuide(db, teamId, row.id);

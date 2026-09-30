@@ -47,7 +47,7 @@ export function AppPage() {
         const areaName = (id: string | null) => app.areas.find((a) => a.id === id)?.name;
         return (
           <>
-            <Link to="/" className="back">
+            <Link to="/apps" className="back">
               ← {t("nav.apps")}
             </Link>
             <div className="page-head">

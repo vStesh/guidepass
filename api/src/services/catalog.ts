@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, ilike, or, sql } from "drizzle-orm";
 import type { GuideType } from "@guidepass/schema";
 import type { Db } from "../db/client.ts";
 import { apps, areas, guideVersions, guides, type GuideStatus } from "../db/schema.ts";
@@ -52,16 +52,23 @@ export async function createArea(db: Db, teamId: string, appId: string, body: { 
 }
 
 export interface GuideFilters {
+  /** One app, or every app of the team when left out. */
+  appId?: string;
   areaId?: string;
   status?: GuideStatus | "all";
   build?: string;
   environment?: string;
   type?: GuideType;
+  /** Matches the title, slug or build, case-insensitively. */
+  q?: string;
   limit?: number;
+  offset?: number;
 }
 
-export async function listGuides(db: Db, teamId: string, appId: string, query: GuideFilters = {}) {
-  const filters = [eq(guides.appId, appId), eq(apps.teamId, teamId)];
+/** Guides of the team, newest first, each with its app. */
+export async function listGuides(db: Db, teamId: string, query: GuideFilters = {}) {
+  const filters = [eq(apps.teamId, teamId)];
+  if (query.appId) filters.push(eq(guides.appId, query.appId));
   if (query.areaId) filters.push(eq(guides.areaId, query.areaId));
   const status = query.status ?? "active";
   if (status !== "all") filters.push(eq(guides.status, status));
@@ -70,6 +77,11 @@ export async function listGuides(db: Db, teamId: string, appId: string, query: G
   if (query.environment) {
     filters.push(sql`${guides.environments} @> ${JSON.stringify([query.environment])}::jsonb`);
   }
+  const q = query.q?.trim();
+  if (q) {
+    const pattern = `%${q.replace(/[\\%_]/g, (ch) => `\\${ch}`)}%`;
+    filters.push(or(ilike(guides.title, pattern), ilike(guides.slug, pattern), ilike(guides.build, pattern))!);
+  }
 
   return db
     .select({
@@ -77,6 +89,8 @@ export async function listGuides(db: Db, teamId: string, appId: string, query: G
       slug: guides.slug,
       title: guides.title,
       type: guides.type,
+      appId: guides.appId,
+      appName: apps.name,
       areaId: guides.areaId,
       build: guides.build,
       branch: guides.branch,
@@ -89,8 +103,9 @@ export async function listGuides(db: Db, teamId: string, appId: string, query: G
     .from(guides)
     .innerJoin(apps, eq(apps.id, guides.appId))
     .where(and(...filters))
-    .orderBy(desc(guides.updatedAt))
-    .limit(query.limit ?? 20);
+    .orderBy(desc(guides.updatedAt), desc(guides.id))
+    .limit(query.limit ?? 20)
+    .offset(query.offset ?? 0);
 }
 
 /** One version of a guide (the current one by default) and the version history. */
