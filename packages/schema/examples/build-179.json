@@ -1,6 +1,7 @@
 {
   "schemaVersion": 1,
   "title": "Build 179 — Відповіді на коментарі (B02)",
+  "type": "feature",
   "build": "179",
   "pr": "#112",
   "meta": "бекенд на dev: міграція 77, app_v2_get_comments 2.0.5, app_v2_post_comment 2.0.7",

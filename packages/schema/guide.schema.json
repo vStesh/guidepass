@@ -9,6 +9,10 @@
   "properties": {
     "schemaVersion": { "const": 1 },
     "title": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "type": {
+      "enum": ["feature", "bugfix", "improvement", "mixed"],
+      "description": "What the build changes: a new feature, a bug fix, a change to existing behaviour, or several of these."
+    },
     "build": { "type": "string", "description": "Build number or version under test, e.g. \"179\"." },
     "branch": { "type": "string" },
     "pr": { "type": "string", "description": "Pull or merge request reference, e.g. \"#112\"." },
@@ -68,9 +72,9 @@
         "important": { "type": "boolean", "default": false, "description": "Key scenario that must be checked on every run." },
         "platforms": {
           "type": "array",
-          "items": { "enum": ["ios", "android", "web"] },
+          "items": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$", "maxLength": 30 },
           "uniqueItems": true,
-          "description": "Platforms this scenario applies to. Omit to apply to all platforms of the app."
+          "description": "Platform keys of the app this scenario applies to (built-in: ios, android, web, api; apps can add their own). Omit to apply to all platforms of the app."
         },
         "environments": {
           "type": "array",

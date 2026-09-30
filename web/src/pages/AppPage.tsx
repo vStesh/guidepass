@@ -1,7 +1,9 @@
 import { useState, type FormEvent } from "react";
 import { Link, useParams, useSearchParams } from "react-router";
-import type { Area, UploadResult } from "../api.ts";
-import { Chip, ErrorBox, Load, formatDate, slugify } from "../components/ui.tsx";
+import { guideTypes } from "@guidepass/schema/core";
+import type { App, Area, UploadResult } from "../api.ts";
+import { PlatformsEditor, type PlatformsValue } from "../components/PlatformsEditor.tsx";
+import { Chip, ErrorBox, Load, TypeBadge, formatDate, platformLabel, slugify } from "../components/ui.tsx";
 import { useI18n } from "../i18n/index.tsx";
 import { isOwner, useLoad, useSession } from "../session.tsx";
 
@@ -13,14 +15,21 @@ export function AppPage() {
   const areaId = params.get("area") ?? "";
   const status = params.get("status") ?? "active";
   const environment = params.get("env") ?? "";
+  const type = params.get("type") ?? "";
 
   const [appState, reloadApp] = useLoad(
     () => Promise.all([api.app(appId), api.environments()]).then(([a, e]) => ({ ...a, ...e })),
     [api, appId],
   );
   const [guidesState, reloadGuides] = useLoad(
-    () => api.guides(appId, { areaId: areaId || undefined, status, environment: environment || undefined }),
-    [api, appId, areaId, status, environment],
+    () =>
+      api.guides(appId, {
+        areaId: areaId || undefined,
+        status,
+        environment: environment || undefined,
+        type: type || undefined,
+      }),
+    [api, appId, areaId, status, environment, type],
   );
 
   const setParam = (key: string, value: string) => {
@@ -44,7 +53,7 @@ export function AppPage() {
               <h1>{app.name}</h1>
               <span className="list-meta">
                 {app.platforms.map((p) => (
-                  <Chip key={p}>{t(`platform.${p}`)}</Chip>
+                  <Chip key={p}>{platformLabel(t, p, app.platformNames)}</Chip>
                 ))}
               </span>
             </div>
@@ -67,6 +76,14 @@ export function AppPage() {
                       {e.name}
                     </option>
                   ))}
+              </select>
+              <select value={type} onChange={(e) => setParam("type", e.target.value)} aria-label={t("app.allTypes")}>
+                <option value="">{t("app.allTypes")}</option>
+                {guideTypes.map((ty) => (
+                  <option key={ty} value={ty}>
+                    {t(`type.${ty}`)}
+                  </option>
+                ))}
               </select>
               <div className="segmented" role="group">
                 {(["active", "archived"] as const).map((s) => (
@@ -92,6 +109,7 @@ export function AppPage() {
                         <Link to={`/guides/${g.id}`} className="list-item">
                           <span className="list-title">{g.title}</span>
                           <span className="list-meta">
+                            {g.type && <TypeBadge type={g.type} />}
                             {areaName(g.areaId) && <Chip tone="accent">{areaName(g.areaId)}</Chip>}
                             {g.environments.map((e) => (
                               <Chip key={e}>{envName(e)}</Chip>
@@ -112,6 +130,7 @@ export function AppPage() {
             {isOwner(me) && (
               <>
                 <NewAreaForm appId={app.id} onDone={reloadApp} />
+                <AppPlatforms app={app} onSaved={reloadApp} />
                 <UploadGuideForm appId={app.id} areas={app.areas} onUploaded={reloadGuides} />
               </>
             )}
@@ -263,5 +282,61 @@ function DiffSummary({ diff }: { diff: UploadResult["diff"] }) {
         </li>
       ))}
     </ul>
+  );
+}
+
+/** Owners change the app's platforms; ones that already have runs can't be removed (the API says which). */
+function AppPlatforms({ app, onSaved }: { app: App; onSaved: () => void }) {
+  const { t } = useI18n();
+  const { api } = useSession();
+  const [open, setOpen] = useState(false);
+  const [value, setValue] = useState<PlatformsValue>({ platforms: app.platforms, platformNames: app.platformNames });
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState<unknown>(null);
+
+  if (!open) {
+    return (
+      <button type="button" className="button section-gap" onClick={() => setOpen(true)}>
+        {t("app.editPlatforms")}
+      </button>
+    );
+  }
+
+  async function save() {
+    setError(null);
+    setSaved(false);
+    try {
+      await api.updateApp(app.id, value);
+      setSaved(true);
+      onSaved();
+    } catch (err) {
+      setError(err);
+    }
+  }
+
+  return (
+    <div className="card stack section-gap">
+      <PlatformsEditor value={value} onChange={setValue} />
+      {saved && <p className="notice notice-ok">{t("app.platformsSaved")}</p>}
+      {error ? <ErrorBox error={error} /> : null}
+      <div className="row">
+        <button type="button" className="button button-primary" disabled={!value.platforms.length} onClick={() => void save()}>
+          {t("app.save")}
+        </button>
+        <button
+          type="button"
+          className="button button-ghost"
+          onClick={() => {
+            // Drop unsaved changes so the editor reopens with what is actually saved.
+            setValue({ platforms: app.platforms, platformNames: app.platformNames });
+            setError(null);
+            setSaved(false);
+            setOpen(false);
+          }}
+        >
+          {t("app.cancel")}
+        </button>
+      </div>
+    </div>
   );
 }

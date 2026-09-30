@@ -10,6 +10,7 @@ import { AppsPage } from "./pages/AppsPage.tsx";
 import { GuidePage } from "./pages/GuidePage.tsx";
 import { ProfilePage } from "./pages/ProfilePage.tsx";
 import { RunPage } from "./pages/RunPage.tsx";
+import { SettingsPage } from "./pages/SettingsPage.tsx";
 import { SetupPage } from "./pages/SetupPage.tsx";
 import { SignInPage } from "./pages/SignInPage.tsx";
 import { TeamPage } from "./pages/TeamPage.tsx";
@@ -69,6 +70,7 @@ export function App({ auth }: { auth: Auth }) {
                 <Route path="runs/:runId" element={<RunPage />} />
                 <Route path="team" element={<TeamPage />} />
                 <Route path="profile" element={<ProfilePage />} />
+                <Route path="settings" element={<SettingsPage />} />
                 <Route path="*" element={<AppsPage />} />
               </Route>
             </Routes>

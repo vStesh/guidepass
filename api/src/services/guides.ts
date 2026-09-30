@@ -71,6 +71,7 @@ async function upload(db: Db, input: UploadGuideInput): Promise<UploadGuideResul
     .where(eq(environments.archived, false));
   const validation = validateGuide(input.content, {
     environments: activeEnvironments.map((e) => e.key),
+    platforms: app.platforms,
   });
   if (!validation.ok) {
     throw new ApiError("invalid", "Guide content is invalid.", validation.errors);
@@ -146,6 +147,7 @@ async function upload(db: Db, input: UploadGuideInput): Promise<UploadGuideResul
       : { createdByTokenId: input.author.tokenId };
   const fields = {
     title: content.title,
+    type: content.type ?? null,
     build: content.build ?? null,
     branch: content.branch ?? null,
     pr: content.pr ?? null,

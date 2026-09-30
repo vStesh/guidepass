@@ -9,7 +9,7 @@ import {
   unique,
   uuid,
 } from "drizzle-orm/pg-core";
-import type { GuideContent, Platform, ResultStatus } from "@guidepass/schema";
+import type { GuideContent, GuideType, Platform, ResultStatus } from "@guidepass/schema";
 
 // Arrays are stored as jsonb: the Aurora Data API does not accept array parameters.
 
@@ -98,6 +98,8 @@ export const apps = pgTable(
     slug: text("slug").notNull(),
     name: text("name").notNull(),
     platforms: jsonb("platforms").$type<Platform[]>().notNull(),
+    /** Display names of the app's own platforms (built-in ones are translated in the UI). */
+    platformNames: jsonb("platform_names").$type<Record<string, string>>().notNull().default({}),
     createdAt: createdAt(),
   },
   (t) => [unique().on(t.teamId, t.slug)],
@@ -125,6 +127,7 @@ export const guides = pgTable(
     areaId: uuid("area_id").references(() => areas.id),
     slug: text("slug").notNull(),
     title: text("title").notNull(),
+    type: text("type").$type<GuideType>(),
     build: text("build"),
     branch: text("branch"),
     pr: text("pr"),

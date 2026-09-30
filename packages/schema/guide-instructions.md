@@ -23,6 +23,8 @@ Write in the language the team uses for guides (the MCP tool returns it with the
 
 **`title`** — `Build <n> — <what changed>`, or `<branch or PR> — <what changed>` when there is no build number. Short enough to fit on one line on a phone.
 
+**`type`** — what the build changes, from the changelog: `feature` (new behaviour — mostly "Added"), `bugfix` (something broken now works — mostly "Fixed"), `improvement` (existing behaviour changed or made better — mostly "Changed"), `mixed` when a build has more than one of these in similar measure.
+
 **`build`, `branch`, `pr`** — fill in whatever identifies the build under test.
 
 **`meta`** — one line of technical context for people who need it: backend versions, migrations, environment, commit. Testers may skip it.
@@ -63,7 +65,7 @@ For each scenario:
 - **`key`** — a short English kebab-case id that describes the check (`reply-to-comment`, `retry-after-network-error`). It must stay the same when the scenario is edited later, because results are matched by key across guide versions. Never reuse a key for a different check.
 - **`title`** — what is being checked, in a few words.
 - **`important: true`** — for the one to three checks that must pass before the build can go further. Usually the main happy path and the riskiest edge case.
-- **`platforms`** — set only when the scenario applies to some platforms (`["android"]`). Leave it out when it applies to all.
+- **`platforms`** — set only when the scenario applies to some of the app's platforms (`["android"]`). Leave it out when it applies to all. Use the app's platform keys from `list_apps`: built-in `ios`, `android`, `web`, `api`, and the app's own (for example `admin`). **Backend-only changes** (a Lambda, an API endpoint, a migration) get `platforms: ["api"]` — only if the app has the `api` platform in `list_apps`; if it doesn't, ask the user to add it on the app page first: the tester checks them with an HTTP client, logs or the database, and the steps say exactly what to call or look at. If a backend change is also visible in the apps, add a separate scenario for that on the app platforms.
 - **`environments`** — set only when the scenario applies to some of the guide's environments. Leave it out when it applies to all.
 - **`steps`** — 1–4 imperative steps. Name who does what when there is more than one account ("A writes a comment", "B taps Reply"). Use the exact labels the user sees on screen, in quotes.
 - **`expected`** — what the tester must see, concretely enough to decide pass or fail without asking anyone. Include what must *not* happen when that is the risk ("the drawer does not open", "only one reply appears, not two"). If the result persists, say to reopen the screen and check again.

@@ -1,6 +1,6 @@
 import { NavLink, Outlet } from "react-router";
 import { useI18n } from "../i18n/index.tsx";
-import { useSession } from "../session.tsx";
+import { isOwner, useSession } from "../session.tsx";
 
 export function Layout() {
   const { t } = useI18n();
@@ -18,6 +18,7 @@ export function Layout() {
             {t("nav.apps")}
           </NavLink>
           <NavLink to="/team">{t("nav.team")}</NavLink>
+          {isOwner(me) && <NavLink to="/settings">{t("nav.settings")}</NavLink>}
           <NavLink to="/profile">{t("nav.profile")}</NavLink>
         </nav>
       </header>
