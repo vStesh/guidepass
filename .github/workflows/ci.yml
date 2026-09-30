@@ -28,6 +28,15 @@ jobs:
       - run: npm run typecheck
       - run: npx oxlint .
       - run: npm test
+      # The committed migrations must match api/src/db/schema.ts.
+      - name: Migrations are up to date
+        run: |
+          npm run db:generate -w api
+          if [ -n "$(git status --porcelain api/migrations)" ]; then
+            echo "::error::Schema changed without a migration. Run: npm run db:generate -w api, and commit api/migrations."
+            git status --porcelain api/migrations
+            exit 1
+          fi
       - run: npm run build
 
   infra:
