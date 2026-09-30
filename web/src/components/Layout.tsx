@@ -15,8 +15,9 @@ export function Layout() {
         </NavLink>
         <nav className="nav">
           <NavLink to="/" end>
-            {t("nav.apps")}
+            {t("nav.guides")}
           </NavLink>
+          <NavLink to="/apps">{t("nav.apps")}</NavLink>
           <NavLink to="/team">{t("nav.team")}</NavLink>
           {isOwner(me) && <NavLink to="/settings">{t("nav.settings")}</NavLink>}
           <NavLink to="/profile">{t("nav.profile")}</NavLink>

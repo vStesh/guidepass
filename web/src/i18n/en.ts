@@ -202,6 +202,14 @@ export const en = {
   "slack.disconnect": "Disconnect",
   "slack.saved": "Saved.",
 
+  "nav.guides": "Guides",
+  "home.title": "All guides",
+  "home.allApps": "All apps",
+  "home.search": "Search by title, id or build",
+  "home.loadMore": "Show more",
+  "home.empty": "No guides match these filters.",
+  "home.noApps": "No apps yet. Add one on the Apps page.",
+
   "error.unauthenticated": "Your session has ended. Sign in again.",
   "error.forbidden": "You don't have access to this.",
   "error.not_found": "This doesn't exist, or it was removed.",

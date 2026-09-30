@@ -203,6 +203,14 @@ export const uk: Messages = {
   "slack.disconnect": "Відключити",
   "slack.saved": "Збережено.",
 
+  "nav.guides": "Гайди",
+  "home.title": "Усі гайди",
+  "home.allApps": "Усі застосунки",
+  "home.search": "Пошук за назвою, id чи білдом",
+  "home.loadMore": "Показати ще",
+  "home.empty": "Немає гайдів за цими фільтрами.",
+  "home.noApps": "Застосунків ще немає. Додайте на сторінці «Застосунки».",
+
   "error.unauthenticated": "Сеанс завершився. Увійдіть знову.",
   "error.forbidden": "У вас немає доступу до цього.",
   "error.not_found": "Цього не існує або його прибрали.",

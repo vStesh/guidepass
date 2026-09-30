@@ -146,3 +146,30 @@ describe("environments", () => {
     expect((await call("PATCH", "/environments/stg", { archived: false })).status).toBe(200);
   });
 });
+
+describe("guides across apps", () => {
+  it("lists every app's guides with filters, search and paging", async () => {
+    const a = (await call("POST", "/apps", { slug: "svt", name: "Svitlofour", platforms: ["ios", "android"] })).body.app.id;
+    const b = (await call("POST", "/apps", { slug: "web", name: "Web map", platforms: ["ios", "android"] })).body.app.id;
+    await call("POST", `/apps/${a}/guides`, { slug: "build-179", content: example });
+    await call("POST", `/apps/${b}/guides`, { slug: "build-180", content: { ...example, title: "Build 180 — 100% fix_it", type: "bugfix" } });
+
+    const all = (await call("GET", "/guides")).body.guides;
+    expect(all.map((g: { slug: string; appName: string }) => `${g.appName}/${g.slug}`).sort()).toEqual([
+      "Svitlofour/build-179",
+      "Web map/build-180",
+    ]);
+    expect((await call("GET", `/guides?appId=${b}`)).body.guides).toHaveLength(1);
+    expect((await call("GET", "/guides?type=bugfix")).body.guides[0].slug).toBe("build-180");
+    expect((await call("GET", "/guides?q=коментарі")).body.guides[0].slug).toBe("build-179");
+    // % and _ are matched literally, not as wildcards.
+    expect((await call("GET", "/guides?q=100%25")).body.guides.map((g: { slug: string }) => g.slug)).toEqual(["build-180"]);
+    expect((await call("GET", "/guides?q=x_y")).body.guides).toHaveLength(0);
+
+    const page1 = (await call("GET", "/guides?limit=1")).body.guides;
+    const page2 = (await call("GET", "/guides?limit=1&offset=1")).body.guides;
+    expect(page1).toHaveLength(1);
+    expect(page2).toHaveLength(1);
+    expect(page1[0].id).not.toBe(page2[0].id);
+  });
+});

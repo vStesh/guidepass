@@ -8,6 +8,7 @@ import { I18nProvider, initialLocale, rememberLocale, useI18n } from "./i18n/ind
 import { AppPage } from "./pages/AppPage.tsx";
 import { AppsPage } from "./pages/AppsPage.tsx";
 import { GuidePage } from "./pages/GuidePage.tsx";
+import { GuidesPage } from "./pages/GuidesPage.tsx";
 import { ProfilePage } from "./pages/ProfilePage.tsx";
 import { RunPage } from "./pages/RunPage.tsx";
 import { SettingsPage } from "./pages/SettingsPage.tsx";
@@ -64,14 +65,15 @@ export function App({ auth }: { auth: Auth }) {
           <BrowserRouter>
             <Routes>
               <Route element={<Layout />}>
-                <Route index element={<AppsPage />} />
+                <Route index element={<GuidesPage />} />
+                <Route path="apps" element={<AppsPage />} />
                 <Route path="apps/:appId" element={<AppPage />} />
                 <Route path="guides/:guideId" element={<GuidePage />} />
                 <Route path="runs/:runId" element={<RunPage />} />
                 <Route path="team" element={<TeamPage />} />
                 <Route path="profile" element={<ProfilePage />} />
                 <Route path="settings" element={<SettingsPage />} />
-                <Route path="*" element={<AppsPage />} />
+                <Route path="*" element={<GuidesPage />} />
               </Route>
             </Routes>
           </BrowserRouter>
