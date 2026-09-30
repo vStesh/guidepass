@@ -22,3 +22,4 @@ crash.log
 
 # Terraform build output
 infra/.build/
+*.tfplan
