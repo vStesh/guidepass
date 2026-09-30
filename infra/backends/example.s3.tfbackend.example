@@ -1,0 +1,7 @@
+# Copy to backends/<instance>.s3.tfbackend (ignored by git). One state bucket per
+# AWS account; each instance in that account gets its own key.
+bucket       = "gp-tfstate-123456789012"
+key          = "guidepass/schoolplus.tfstate"
+region       = "eu-central-1"
+encrypt      = true
+use_lockfile = true

@@ -12,15 +12,17 @@ The credentials need the permissions in [`deploy-policy.json`](deploy-policy.jso
 # 1. Build the Lambda bundles (api/dist) and the web app (web/dist)
 npm ci && npm run build
 
-# 2. One Terraform workspace and one tfvars file per instance
+# 2. Per instance, two small files next to this README (both ignored by git):
 cd infra
-terraform init
-terraform workspace new schoolplus          # or: terraform workspace select schoolplus
-cp terraform.tfvars.example schoolplus.tfvars  # edit it; *.tfvars are not committed
+cp terraform.tfvars.example schoolplus.tfvars                                   # the instance's settings
+cp backends/example.s3.tfbackend.example backends/schoolplus.s3.tfbackend       # where its state lives
 
-# 3. Review, then apply
-terraform plan  -var-file=schoolplus.tfvars
-terraform apply -var-file=schoolplus.tfvars
+# 3. First time in an AWS account: create the private, versioned state bucket
+AWS_PROFILE=<profile> ./tf.sh schoolplus bootstrap
+
+# 4. Review, then apply
+AWS_PROFILE=<profile> ./tf.sh schoolplus plan
+AWS_PROFILE=<profile> ./tf.sh schoolplus apply
 ```
 
 `apply` also runs the migration Lambda, so the database schema is always in step with the code. Re-run steps 1 and 3 to deploy a new version.
@@ -34,7 +36,11 @@ After the first apply:
 - An existing user pool must be in the same region as the instance.
 - Worth checking once after the first apply: the Data API is on (`aws rds describe-db-clusters --query "DBClusters[].HttpEndpointEnabled"`), and the database scales to 0 ACU when idle (CloudWatch metric `ServerlessDatabaseCapacity`).
 
-State is local by default, one per workspace. To keep it in S3, copy `backend.tf.example` to `backend.tf` and run `terraform init -reconfigure`.
+### State
+
+Terraform state is kept in S3: one bucket per AWS account (`gp-tfstate-<account id>`, private, versioned, encrypted), one key per instance (`guidepass/<instance>.tfstate`), with S3 locking so two people can't apply at once. `./tf.sh <instance> …` switches to that instance's state before every command, so several instances can be managed from one checkout, and from any machine that has the backend file and credentials. The deploy policy already covers the state bucket (its name starts with `gp-`).
+
+Moving an existing local state into S3: `terraform state pull > old.tfstate` in the old setup, then `./tf.sh <instance> bootstrap` and `./tf.sh <instance> state push old.tfstate`, and check that `./tf.sh <instance> plan` shows no unexpected changes.
 
 ## Variables
 
@@ -55,9 +61,9 @@ One deployment per project, in the project's own AWS account. Full list with def
 1. **Parent zone in the same account** — set `hosted_zone_id`; Terraform adds the certificate validation and alias records.
 2. **Parent zone in another account** (for example, the domain lives in the production account and Guidepass in the development account) — leave `hosted_zone_id` empty. Create the zone first, delegate it, then apply the rest:
    ```bash
-   terraform apply -var-file=svitlofour.tfvars -target=aws_route53_zone.this
-   terraform output delegate_name_servers   # add these as an NS record for domain_name in the parent zone
-   terraform apply -var-file=svitlofour.tfvars
+   ./tf.sh svitlofour apply -target=aws_route53_zone.this
+   ./tf.sh svitlofour output delegate_name_servers   # add these as an NS record for domain_name in the parent zone
+   ./tf.sh svitlofour apply
    ```
    Certificate validation waits (up to two hours) until the delegation is visible.
 3. **No custom domain** — leave `domain_name` empty; the instance is reachable at the AWS default domains, and a domain can be added later.
@@ -87,8 +93,8 @@ The API Lambda gets `cognito-idp:ListUsers` on the pool in both cases (to check 
 The database and a new user pool are protected from deletion. To remove an instance:
 
 ```bash
-terraform apply   -var-file=<instance>.tfvars -var deletion_protection=false
-terraform destroy -var-file=<instance>.tfvars -var deletion_protection=false
+./tf.sh <instance> apply   -var deletion_protection=false
+./tf.sh <instance> destroy -var deletion_protection=false
 ```
 
 A final database snapshot is kept (`<prefix>-db-final-<timestamp>`); delete it in the RDS console when it's no longer needed.
