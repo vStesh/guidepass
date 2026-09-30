@@ -5,7 +5,7 @@ import { localAuthenticator } from "./auth.ts";
 import { localDirectory } from "./directory.ts";
 import type { Db } from "./db/client.ts";
 import { defaultEnvironments, seedEnvironments } from "./db/client.ts";
-import { createLocalDb } from "./db/local.ts";
+import { createTestDb } from "./db/local.ts";
 import { guideVersions, memberships, results, runs } from "./db/schema.ts";
 
 let db: Db;
@@ -35,7 +35,7 @@ async function setUpApp() {
 }
 
 beforeEach(async () => {
-  db = await createLocalDb();
+  db = await createTestDb();
   await seedEnvironments(db, defaultEnvironments);
   app = createApp({ db, authenticate: localAuthenticator, directory: localDirectory });
 });
