@@ -25,6 +25,7 @@ A small web app for manual testing. An AI agent writes test guides for a build, 
 | `api/` | Lambda handlers behind API Gateway |
 | `web/` | Responsive web app (React, Vite), English and Ukrainian |
 | `mcp/` | Design and usage of the remote MCP server for AI agents (code in `api/src/mcp/`) |
+| `docs/` | Guides for people using Guidepass, e.g. [connecting an AI agent](docs/connect-agent.md) |
 | `packages/schema/` | JSON Schema for guides, with examples |
 
 ## Development

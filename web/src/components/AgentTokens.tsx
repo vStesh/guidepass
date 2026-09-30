@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import type { AgentToken } from "../api.ts";
 import { useI18n } from "../i18n/index.tsx";
 import { useLoad, useSession } from "../session.tsx";
+import { ConnectAgentGuide } from "./ConnectAgentGuide.tsx";
 import { ErrorBox, Load, formatDate } from "./ui.tsx";
 
 /** Owners create and revoke the tokens AI agents use for MCP. */
@@ -12,12 +13,7 @@ export function AgentTokens() {
   const [name, setName] = useState("");
   const [scope, setScope] = useState<AgentToken["scope"]>("read");
   const [created, setCreated] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
   const [error, setError] = useState<unknown>(null);
-
-  const connectCommand = created
-    ? `claude mcp add --transport http guidepass ${window.location.origin}/mcp --header "Authorization: Bearer ${created}"`
-    : "";
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -25,20 +21,10 @@ export function AgentTokens() {
     try {
       const { token } = await api.createAgentToken(name, scope);
       setCreated(token.token);
-      setCopied(false);
       setName("");
       void reload();
     } catch (err) {
       setError(err);
-    }
-  }
-
-  async function copy(text: string) {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-    } catch {
-      // The command stays visible to copy by hand.
     }
   }
 
@@ -51,13 +37,7 @@ export function AgentTokens() {
       {created && (
         <div className="notice notice-ok stack">
           <strong>{t("tokens.created")}</strong>
-          <span>{t("tokens.connect")}</span>
-          <code className="command">{connectCommand}</code>
-          <div className="row">
-            <button type="button" className="button button-small" onClick={() => void copy(connectCommand)}>
-              {copied ? t("tokens.copied") : t("tokens.copy")}
-            </button>
-          </div>
+          <ConnectAgentGuide token={created} />
         </div>
       )}
 
