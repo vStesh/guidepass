@@ -18,7 +18,16 @@ const mcp = createMcpHandler({
   publicUrl: process.env.PUBLIC_URL ?? "http://localhost:5173",
 });
 const app = new Hono()
-  .route("/api", createApp({ db, authenticate: localAuthenticator, directory: localDirectory }))
+  .route(
+    "/api",
+    createApp({
+      db,
+      authenticate: localAuthenticator,
+      directory: localDirectory,
+      publicUrl: process.env.PUBLIC_URL ?? "http://localhost:5173",
+      guideLanguage: process.env.GUIDE_LANGUAGE ?? "en",
+    }),
+  )
   .all("/mcp", (c) => mcp(c.req.raw));
 serve({ fetch: app.fetch, port });
 console.log(`Guidepass API on http://localhost:${port}/api, MCP on http://localhost:${port}/mcp`);

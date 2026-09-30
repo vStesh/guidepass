@@ -36,6 +36,13 @@
       "when": 1790760530625,
       "tag": "0004_platforms_and_guide_type",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1790761680245,
+      "tag": "0005_slack",
+      "breakpoints": true
     }
   ]
 }

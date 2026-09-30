@@ -3,6 +3,7 @@ import type { GuideType } from "@guidepass/schema";
 import type { Db } from "../db/client.ts";
 import { apps, areas, guideVersions, guides, type GuideStatus } from "../db/schema.ts";
 import { ApiError, isUniqueViolation } from "../errors.ts";
+import { publicApp } from "./notifications.ts";
 
 // Reads and writes shared by the web API and the MCP server. Every function is
 // scoped to one team.
@@ -29,7 +30,7 @@ export async function listAppsWithAreas(db: Db, teamId: string) {
     .groupBy(areas.id)
     .orderBy(asc(areas.name));
   return appRows.map((app) => ({
-    ...app,
+    ...publicApp(app),
     areas: areaRows
       .filter((row) => row.area.appId === app.id)
       .map((row) => ({ id: row.area.id, slug: row.area.slug, name: row.area.name, activeGuides: row.activeGuides })),

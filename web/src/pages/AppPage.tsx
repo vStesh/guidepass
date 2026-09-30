@@ -3,6 +3,7 @@ import { Link, useParams, useSearchParams } from "react-router";
 import { guideTypes } from "@guidepass/schema/core";
 import type { App, Area, UploadResult } from "../api.ts";
 import { PlatformsEditor, type PlatformsValue } from "../components/PlatformsEditor.tsx";
+import { SlackSettings } from "../components/SlackSettings.tsx";
 import { Chip, ErrorBox, Load, TypeBadge, formatDate, platformLabel, slugify } from "../components/ui.tsx";
 import { useI18n } from "../i18n/index.tsx";
 import { isOwner, useLoad, useSession } from "../session.tsx";
@@ -131,6 +132,7 @@ export function AppPage() {
               <>
                 <NewAreaForm appId={app.id} onDone={reloadApp} />
                 <AppPlatforms app={app} onSaved={reloadApp} />
+                <SlackSettings app={app} onSaved={reloadApp} />
                 <UploadGuideForm appId={app.id} areas={app.areas} onUploaded={reloadGuides} />
               </>
             )}

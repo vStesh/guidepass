@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import type { Context } from "hono";
 import type { Db } from "./db/client.ts";
 import type { UserDirectory } from "./directory.ts";
+import type { NotificationContext } from "./services/notifications.ts";
 import { memberships, type Locale, type Role } from "./db/schema.ts";
 import { ApiError } from "./errors.ts";
 import { acceptPendingInvitation } from "./services/invitations.ts";
@@ -13,6 +14,7 @@ export interface AppEnv {
     /** Only this email may run `/setup`; unset in local development. */
     ownerEmail: string | undefined;
     directory: UserDirectory;
+    notifications: NotificationContext;
   };
 }
 
