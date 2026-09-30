@@ -1,30 +1,36 @@
 # Aurora Serverless v2 (PostgreSQL) reached only through the Data API: the
 # Lambdas need no VPC or NAT, and the database has no network ingress at all.
 
-# Accounts without a default VPC (common under AWS Organizations) pass db_subnet_ids.
+# The database gets its own small VPC with two private subnets (no internet or NAT
+# gateway, so it costs nothing): the Data API needs no network path, and the
+# instance doesn't depend on a default VPC or touch other networks. Pass
+# db_subnet_ids to use existing subnets instead.
 locals {
-  use_default_vpc = length(var.db_subnet_ids) == 0
+  create_vpc = length(var.db_subnet_ids) == 0
 }
 
-data "aws_vpc" "default" {
-  count   = local.use_default_vpc ? 1 : 0
-  default = true
+resource "aws_vpc" "db" {
+  count      = local.create_vpc ? 1 : 0
+  cidr_block = "10.42.0.0/24"
+  tags       = { Name = "${var.name_prefix}-db" }
 }
 
-data "aws_subnets" "default" {
-  count = local.use_default_vpc ? 1 : 0
-  filter {
-    name   = "vpc-id"
-    values = [data.aws_vpc.default[0].id]
-  }
+resource "aws_subnet" "db" {
+  count             = local.create_vpc ? 2 : 0
+  vpc_id            = aws_vpc.db[0].id
+  cidr_block        = cidrsubnet(aws_vpc.db[0].cidr_block, 2, count.index)
+  availability_zone = "${var.region}${["a", "b"][count.index]}"
+  tags              = { Name = "${var.name_prefix}-db-${["a", "b"][count.index]}" }
 }
 
-data "aws_subnet" "first" {
-  id = local.db_subnet_ids[0]
+data "aws_subnet" "given" {
+  count = local.create_vpc ? 0 : 1
+  id    = var.db_subnet_ids[0]
 }
 
 locals {
-  db_subnet_ids = local.use_default_vpc ? data.aws_subnets.default[0].ids : var.db_subnet_ids
+  db_subnet_ids = local.create_vpc ? aws_subnet.db[*].id : var.db_subnet_ids
+  db_vpc_id     = local.create_vpc ? aws_vpc.db[0].id : data.aws_subnet.given[0].vpc_id
 }
 
 resource "aws_db_subnet_group" "this" {
@@ -35,7 +41,7 @@ resource "aws_db_subnet_group" "this" {
 resource "aws_security_group" "db" {
   name        = "${var.name_prefix}-db"
   description = "Guidepass database: no ingress, reached through the Data API"
-  vpc_id      = data.aws_subnet.first.vpc_id
+  vpc_id      = local.db_vpc_id
 }
 
 resource "aws_rds_cluster" "this" {

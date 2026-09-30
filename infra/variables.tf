@@ -93,7 +93,7 @@ variable "api_throttle_burst" {
 }
 
 variable "db_subnet_ids" {
-  description = "Subnets for the database (at least two AZs). Empty: the default VPC's subnets."
+  description = "Existing subnets for the database (at least two AZs). Empty: a small dedicated VPC is created."
   type        = list(string)
   default     = []
 }
@@ -101,5 +101,5 @@ variable "db_subnet_ids" {
 variable "db_engine_version" {
   description = "Aurora PostgreSQL version at creation (16.3+ can pause at 0 ACU). Check what the region offers: aws rds describe-db-engine-versions --engine aurora-postgresql."
   type        = string
-  default     = "16.6"
+  default     = "16.15"
 }
