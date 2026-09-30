@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { createApp } from "./app.ts";
 import { localAuthenticator } from "./auth.ts";
 import { defaultEnvironments, seedEnvironments, type Db } from "./db/client.ts";
-import { createLocalDb } from "./db/local.ts";
+import { createTestDb } from "./db/local.ts";
 import type { EnsureResult, UserDirectory } from "./directory.ts";
 
 let db: Db;
@@ -24,7 +24,7 @@ async function call(method: string, path: string, as: string, body?: unknown) {
 }
 
 beforeEach(async () => {
-  db = await createLocalDb();
+  db = await createTestDb();
   await seedEnvironments(db, defaultEnvironments);
   directoryAnswer = "exists";
   app = createApp({ db, authenticate: localAuthenticator, directory });

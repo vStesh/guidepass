@@ -4,7 +4,7 @@ import { createApp } from "./app.ts";
 import { localAuthenticator } from "./auth.ts";
 import { localDirectory } from "./directory.ts";
 import { defaultEnvironments, seedEnvironments, type Db } from "./db/client.ts";
-import { createLocalDb } from "./db/local.ts";
+import { createTestDb } from "./db/local.ts";
 import { memberships } from "./db/schema.ts";
 
 let db: Db;
@@ -35,7 +35,7 @@ const mark = (as: string, runId: string, key: string, status: string, note?: str
   call("PUT", `/runs/${runId}/results/${key}`, as, { status, note });
 
 beforeEach(async () => {
-  db = await createLocalDb();
+  db = await createTestDb();
   await seedEnvironments(db, defaultEnvironments);
   app = createApp({ db, authenticate: localAuthenticator, directory: localDirectory });
 

@@ -3,7 +3,7 @@ import example from "@guidepass/schema/examples/build-179.json" with { type: "js
 import { createApp } from "./app.ts";
 import { localAuthenticator } from "./auth.ts";
 import { defaultEnvironments, seedEnvironments, type Db } from "./db/client.ts";
-import { createLocalDb } from "./db/local.ts";
+import { createTestDb } from "./db/local.ts";
 import { localDirectory } from "./directory.ts";
 import type { Notifier } from "./services/notifications.ts";
 
@@ -31,7 +31,7 @@ async function call(method: string, path: string, body?: unknown) {
 }
 
 beforeEach(async () => {
-  db = await createLocalDb();
+  db = await createTestDb();
   await seedEnvironments(db, defaultEnvironments);
   sent = [];
   failing = false;

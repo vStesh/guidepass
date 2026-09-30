@@ -5,7 +5,7 @@ import example from "@guidepass/schema/examples/build-179.json" with { type: "js
 import { createApp } from "./app.ts";
 import { localAuthenticator } from "./auth.ts";
 import { defaultEnvironments, seedEnvironments, type Db } from "./db/client.ts";
-import { createLocalDb } from "./db/local.ts";
+import { createTestDb } from "./db/local.ts";
 import { localDirectory } from "./directory.ts";
 import { apps, teams, users } from "./db/schema.ts";
 import { createMcpHandler } from "./mcp/server.ts";
@@ -51,7 +51,7 @@ async function token(scope: "read" | "write") {
 }
 
 beforeEach(async () => {
-  db = await createLocalDb();
+  db = await createTestDb();
   await seedEnvironments(db, defaultEnvironments);
   api = createApp({ db, authenticate: localAuthenticator, directory: localDirectory });
   mcp = createMcpHandler({ db, guideLanguage: "uk", publicUrl: "https://gp.example.com" });

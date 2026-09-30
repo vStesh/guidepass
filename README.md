@@ -36,6 +36,7 @@ Requires Node.js 22+.
 npm install
 npm test            # all workspaces
 npm run typecheck
+npx oxlint .
 npm run dev -w api  # API on http://localhost:8787/api, data in api/.data
 npm run dev -w web  # web app on http://localhost:5173, proxies /api to the API
 ```
