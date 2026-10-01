@@ -87,6 +87,7 @@ export interface GuideDetail {
 export interface Counts {
   pass: number;
   fail: number;
+  blocked: number;
   skip: number;
   untested: number;
 }
@@ -98,6 +99,9 @@ export interface RunSummary {
   environment: string;
   platform: Platform;
   device: string;
+  build: string | null;
+  commit: string | null;
+  account: string | null;
   startedAt: string;
   finishedAt: string | null;
   counts: Counts;
@@ -107,8 +111,13 @@ export interface ScenarioResult {
   runId: string;
   tester: { id: string; name: string | null };
   device: string;
+  build: string | null;
+  commit: string | null;
+  account: string | null;
   status: ResultStatus;
   note: string | null;
+  evidence: string | null;
+  issueUrl: string | null;
   updatedAt: string;
   fromVersion: number | null;
 }
@@ -121,9 +130,19 @@ export interface GuideResults {
     key: string;
     title: string;
     important: boolean;
+    evidence: boolean;
+    automated: string | null;
     cells: { environment: string; platform: Platform; verdict: Verdict; results: ScenarioResult[] }[];
   }[];
   progress: { environment: string; platform: Platform; counts: Record<Verdict, number> }[];
+}
+
+export interface RunResult {
+  scenarioKey: string;
+  status: ResultStatus;
+  note: string | null;
+  evidence: string | null;
+  issueUrl: string | null;
 }
 
 export interface RunDetail {
@@ -136,10 +155,13 @@ export interface RunDetail {
     environmentKey: string;
     platform: Platform;
     device: string;
+    build: string | null;
+    commit: string | null;
+    account: string | null;
     finishedAt: string | null;
   };
   content: GuideContent;
-  results: { scenarioKey: string; status: ResultStatus; note: string | null }[];
+  results: RunResult[];
   counts: Counts;
 }
 
@@ -255,10 +277,17 @@ export function createApi(auth: Auth) {
 
     results: (guideId: string, params: { version?: number; testerId?: string; filter?: "all" | "problems" } = {}) =>
       request<GuideResults>("GET", `/guides/${guideId}/results${query(params)}`),
-    startRun: (guideId: string, body: { environment: string; platform: Platform; device: string }) =>
+    startRun: (
+      guideId: string,
+      body: { environment: string; platform: Platform; device: string; build?: string; commit?: string; account?: string },
+    ) =>
       request<{ run: { id: string } }>("POST", `/guides/${guideId}/runs`, body),
     run: (runId: string) => request<RunDetail>("GET", `/runs/${runId}`),
-    mark: (runId: string, scenarioKey: string, body: { status: ResultStatus | "untested"; note?: string }) =>
+    mark: (
+      runId: string,
+      scenarioKey: string,
+      body: { status: ResultStatus | "untested"; note?: string; evidence?: string; issueUrl?: string },
+    ) =>
       request<unknown>("PUT", `/runs/${runId}/results/${encodeURIComponent(scenarioKey)}`, body),
     setRunFinished: (runId: string, finished: boolean) =>
       request<unknown>("PATCH", `/runs/${runId}`, { finished }),

@@ -1,11 +1,12 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
 import type { GuideContent, Platform, Scenario } from "@guidepass/schema/core";
-import type { App, Environment, GuideDetail, GuideResults } from "../api.ts";
+import type { App, Counts, Environment, GuideDetail, GuideResults } from "../api.ts";
 import { Chip, ErrorBox, Load, Markdown, ProgressBar, TypeBadge, VerdictBadge, authorLabel, formatDate, platformLabel } from "../components/ui.tsx";
 import { useI18n } from "../i18n/index.tsx";
 import { isOwner, useLoad, useSession } from "../session.tsx";
 
+const ACCOUNT_KEY = "guidepass.account";
 const DEVICE_KEY = "guidepass.lastDevice";
 
 export function GuidePage() {
@@ -142,15 +143,29 @@ function StartRun({
       return "";
     }
   });
+  const [build, setBuild] = useState("");
+  const [commit, setCommit] = useState("");
+  const [account, setAccount] = useState(() => {
+    try {
+      return localStorage.getItem(ACCOUNT_KEY) ?? "";
+    } catch {
+      return "";
+    }
+  });
   const [error, setError] = useState<unknown>(null);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
     setError(null);
     try {
-      const { run } = await api.startRun(guideId, { environment, platform, device });
+      if (!build.trim() && !commit.trim()) {
+        setError(new Error(t("run.buildOrCommit")));
+        return;
+      }
+      const { run } = await api.startRun(guideId, { environment, platform, device, build, commit, account });
       try {
         localStorage.setItem(DEVICE_KEY, device);
+        localStorage.setItem(ACCOUNT_KEY, account);
       } catch {
         // Only a convenience.
       }
@@ -188,7 +203,28 @@ function StartRun({
           <span>{t("guide.device")}</span>
           <input required maxLength={100} placeholder={t("guide.deviceHint")} value={device} onChange={(e) => setDevice(e.target.value)} />
         </label>
+        <label className="field">
+          <span>{t("run.build")}</span>
+          <input
+            maxLength={60}
+            inputMode="text"
+            // Required unless a commit is given: the build actually installed, which may be newer than the guide's.
+            required={!commit.trim()}
+            placeholder={content.build ? t("run.buildHint", { build: content.build }) : ""}
+            value={build}
+            onChange={(e) => setBuild(e.target.value)}
+          />
+        </label>
+        <label className="field">
+          <span>{t("run.commit")}</span>
+          <input maxLength={60} placeholder="a1b2c3d" value={commit} onChange={(e) => setCommit(e.target.value)} />
+        </label>
+        <label className="field">
+          <span>{t("run.account")}</span>
+          <input maxLength={100} placeholder={t("run.accountHint")} value={account} onChange={(e) => setAccount(e.target.value)} />
+        </label>
       </div>
+      <p className="muted small">{t("run.buildOrCommit")}</p>
       {error ? <ErrorBox error={error} /> : null}
       <button type="submit" className="button button-primary">
         {t("guide.start")}
@@ -222,8 +258,9 @@ function RunsList({
         <span className="list-meta">
           <ProgressBar counts={run.counts} />
           <span>
-            {t("run.progress", { done: run.counts.pass + run.counts.fail + run.counts.skip, total: Object.values(run.counts).reduce((a, b) => a + b, 0) })}
+            {t("run.progress", { done: checkedCount(run.counts), total: Object.values(run.counts).reduce((a, b) => a + b, 0) })}
           </span>
+          <RunBuild build={run.build} commit={run.commit} account={run.account} />
           {run.finishedAt ? <Chip>{t("guide.finished")}</Chip> : <span>{formatDate(run.startedAt, locale)}</span>}
         </span>
       </Link>
@@ -296,6 +333,7 @@ function ResultsMatrix({
                   <th scope="row">
                     {s.important && <span className="star" title={t("guide.important")}>★ </span>}
                     {s.title}
+                    {s.automated && <span className="muted small" title={s.automated}> · {t("guide.automated")}</span>}
                   </th>
                   {columns.map((c) => {
                     const cell = s.cells.find((x) => x.environment === c.environment && x.platform === c.platform);
@@ -353,7 +391,9 @@ function CellDetails({
                 <strong>{r.tester.name}</strong> · {r.device} · {formatDate(r.updatedAt, locale)}
                 {r.fromVersion && <Chip>{t("guide.fromVersion", { version: r.fromVersion })}</Chip>}
               </span>
+              <RunBuild build={r.build} commit={r.commit} account={r.account} />
               {r.note && <p className="pre-line">{r.note}</p>}
+              <Proof evidence={r.evidence} issueUrl={r.issueUrl} />
             </li>
           ))}
         </ul>
@@ -460,7 +500,13 @@ export function ScenarioBody({
         {scenario.important && <span className="star" title={t("guide.important")}>★ </span>}
         <strong>{scenario.title}</strong>
         {limits.length > 0 && <Chip>{t("guide.onlyOn", { list: limits.join(", ") })}</Chip>}
+        {scenario.evidence && <Chip tone="accent">{t("guide.needsProof")}</Chip>}
       </div>
+      {scenario.automated && (
+        <p className="muted small">
+          {t("guide.automatedBy", { test: scenario.automated })}
+        </p>
+      )}
       {scenario.deprecated && <p className="muted">{t("guide.deprecated", { reason: scenario.deprecated.reason })}</p>}
       <ol className="steps">
         {scenario.steps.map((step, i) => (
@@ -505,6 +551,44 @@ function VersionHistory({ versions, shown }: { versions: GuideDetail["versions"]
             ))}
           </ol>
         </details>
+      )}
+    </div>
+  );
+}
+
+/** Scenarios someone has marked, whatever the status. */
+export function checkedCount(counts: Counts): number {
+  return counts.pass + counts.fail + counts.blocked + counts.skip;
+}
+
+/** Which build and account a run was made with. */
+export function RunBuild({ build, commit, account }: { build: string | null; commit: string | null; account: string | null }) {
+  const { t } = useI18n();
+  if (!build && !commit && !account) return null;
+  return (
+    <span className="list-meta">
+      {build && <Chip>{t("run.buildShort", { build })}</Chip>}
+      {commit && <Chip>{commit.slice(0, 12)}</Chip>}
+      {account && <Chip>{t("run.accountShort", { account })}</Chip>}
+    </span>
+  );
+}
+
+/** Proof and the issue link behind a result. Only web links become clickable. */
+export function Proof({ evidence, issueUrl }: { evidence: string | null; issueUrl: string | null }) {
+  const { t } = useI18n();
+  if (!evidence && !issueUrl) return null;
+  return (
+    <div className="proof">
+      {evidence && (
+        <div>
+          <strong>{t("run.evidence")}:</strong> <Markdown text={evidence} />
+        </div>
+      )}
+      {issueUrl && /^https?:\/\//i.test(issueUrl) && (
+        <a href={issueUrl} target="_blank" rel="noopener noreferrer">
+          {t("run.issue")}
+        </a>
       )}
     </div>
   );

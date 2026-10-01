@@ -46,3 +46,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Footer with links to the source code, agent connection guide, guide-writing instructions, documentation and issues, the version and the MIT License.
 - Agent tokens are held by a team member: owners pick whose agent a token is for when creating it and can hand it to another member later. Uploads record the holder at upload time; when handing a token over, the owner can move its earlier uploads to the new holder too (for a token given under the wrong name). Agents whose holder left the team are refused, and removing a member revokes their tokens. Migration `0007`: existing tokens and their uploads stay with the owner who created them; tokens of people no longer in the team are revoked.
 - `infra/tf.sh` builds the API and the web app before `plan` and `apply` (`GP_SKIP_BUILD=1` skips it), so a deploy can't silently use an old build.
+- Runs record the build and/or commit actually tested (one is required) and the app account and role used; they show on the run, the guide's runs, every result and in MCP `get_results`.
+- A `blocked` result for scenarios that couldn't be checked (environment down, no test data); one person's pass outweighs it.
+- Proof and issue links on results: every fail needs proof, and so does a pass on scenarios marked `evidence: true` (auth, privacy, security). Proof that looks like a token or key is refused. Scenarios can name an `automated` test that also covers them; it is shown apart and never counts as a pass. Migration `0008`.
+- Guide instructions: separate guides per area for the dev build, production checks in their own guide, proof and automated tests, account names testers record.
+- Status buttons on a run sit in two rows on phones.
+

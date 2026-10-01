@@ -26,13 +26,18 @@ async function call(method: string, path: string, as: string, body?: unknown) {
 }
 
 async function startRun(as: string, environment: string, platform: string, device: string) {
-  const res = await call("POST", `/guides/${guideId}/runs`, as, { environment, platform, device });
+  const res = await call("POST", `/guides/${guideId}/runs`, as, { environment, platform, device, build: "179" });
   expect(res.status).toBe(201);
   return res.body.run.id as string;
 }
 
+// Fails need proof; tests that aren't about proof give a stock one.
 const mark = (as: string, runId: string, key: string, status: string, note?: string) =>
-  call("PUT", `/runs/${runId}/results/${key}`, as, { status, note });
+  call("PUT", `/runs/${runId}/results/${key}`, as, {
+    status,
+    note,
+    ...(status === "fail" ? { evidence: "Screenshot in #215" } : {}),
+  });
 
 beforeEach(async () => {
   db = await createTestDb();
@@ -52,9 +57,9 @@ beforeEach(async () => {
 
 describe("runs", () => {
   it("only starts runs on the guide's environments and the app's platforms", async () => {
-    expect((await call("POST", `/guides/${guideId}/runs`, anna, { environment: "prod", platform: "ios", device: "iPhone 15" })).status).toBe(422);
-    expect((await call("POST", `/guides/${guideId}/runs`, anna, { environment: "dev", platform: "web", device: "Chrome" })).status).toBe(422);
-    const run = await call("POST", `/guides/${guideId}/runs`, anna, { environment: "dev", platform: "ios", device: "iPhone 15" });
+    expect((await call("POST", `/guides/${guideId}/runs`, anna, { environment: "prod", platform: "ios", device: "iPhone 15", build: "179" })).status).toBe(422);
+    expect((await call("POST", `/guides/${guideId}/runs`, anna, { environment: "dev", platform: "web", device: "Chrome", build: "179" })).status).toBe(422);
+    const run = await call("POST", `/guides/${guideId}/runs`, anna, { environment: "dev", platform: "ios", device: "iPhone 15", build: "179" });
     expect(run.body.run).toMatchObject({ version: 1, environmentKey: "dev", platform: "ios" });
   });
 
@@ -66,11 +71,11 @@ describe("runs", () => {
     expect((await mark(anna, runId, "missing", "pass")).status).toBe(404);
 
     let run = await call("GET", `/runs/${runId}`, anna);
-    expect(run.body.counts).toEqual({ pass: 1, fail: 0, skip: 0, untested: 0 });
+    expect(run.body.counts).toEqual({ pass: 1, fail: 0, blocked: 0, skip: 0, untested: 0 });
 
     await mark(anna, runId, "reply-to-comment", "untested");
     run = await call("GET", `/runs/${runId}`, anna);
-    expect(run.body.counts).toEqual({ pass: 0, fail: 0, skip: 0, untested: 1 });
+    expect(run.body.counts).toEqual({ pass: 0, fail: 0, blocked: 0, skip: 0, untested: 1 });
   });
 
   it("keeps people out of each other's runs and freezes finished runs", async () => {
@@ -110,7 +115,7 @@ describe("results", () => {
     expect(cell("stg", "ios").verdict).toBe("untested");
 
     const devIos = res.body.progress.find((p: { environment: string; platform: string }) => p.environment === "dev" && p.platform === "ios");
-    expect(devIos.counts).toEqual({ pass: 0, fail: 0, conflict: 1, skip: 0, untested: 0 });
+    expect(devIos.counts).toEqual({ pass: 0, fail: 0, conflict: 1, blocked: 0, skip: 0, untested: 0 });
     const stgAndroid = res.body.progress.find((p: { environment: string; platform: string }) => p.environment === "stg" && p.platform === "android");
     expect(stgAndroid.counts.untested).toBe(3);
   });
@@ -192,5 +197,66 @@ describe("profile", () => {
     expect((await call("PATCH", "/me", anna, { locale: "uk", name: "Анна" })).body.user).toMatchObject({ locale: "uk", name: "Анна" });
     expect((await call("GET", "/me", anna)).body.user).toMatchObject({ locale: "uk", name: "Анна" });
     expect((await call("PATCH", "/me", anna, { locale: "de" })).status).toBe(422);
+  });
+});
+
+describe("build, account and proof", () => {
+  it("needs a build or commit to start, and keeps them with the account on the run", async () => {
+    const noBuild = await call("POST", `/guides/${guideId}/runs`, anna, { environment: "dev", platform: "ios", device: "iPhone 15" });
+    expect(noBuild.status).toBe(422);
+    const run = await call("POST", `/guides/${guideId}/runs`, anna, {
+      environment: "dev",
+      platform: "ios",
+      device: "iPhone 15",
+      commit: "a1b2c3d",
+      account: "moderator (B)",
+    });
+    expect(run.body.run).toMatchObject({ build: null, commit: "a1b2c3d", account: "moderator (B)" });
+    await mark(anna, run.body.run.id, "reply-to-comment", "pass");
+    const results = (await call("GET", `/guides/${guideId}/results?filter=all`, anna)).body;
+    expect(results.runs[0]).toMatchObject({ commit: "a1b2c3d", account: "moderator (B)" });
+    const reply = results.scenarios.find((s: { key: string }) => s.key === "reply-to-comment");
+    const cell = reply.cells.find((c: { environment: string; platform: string }) => c.environment === "dev" && c.platform === "ios");
+    expect(cell.results[0]).toMatchObject({ commit: "a1b2c3d", account: "moderator (B)" });
+  });
+
+  it("requires proof for fails and refuses secrets in it", async () => {
+    const runId = await startRun(anna, "dev", "ios", "iPhone 15");
+    const put = (body: object) => call("PUT", `/runs/${runId}/results/reply-to-comment`, anna, body);
+
+    const bare = await put({ status: "fail", note: "Wrong thread" });
+    expect(bare.status).toBe(422);
+    expect(bare.body.error.details.reason).toBe("evidence_required");
+
+    const leaked = await put({ status: "fail", evidence: "curl -H 'Authorization: Bearer abcdefghijklmnopqrstuvwxyz123456'" });
+    expect(leaked.body.error.details.reason).toBe("secret_in_evidence");
+
+    const ok = await put({
+      status: "fail",
+      evidence: "POST /comments → 500, request id 42",
+      issueUrl: "https://github.com/svitlofour/app/issues/215",
+    });
+    expect(ok.body.result).toMatchObject({ status: "fail", issueUrl: "https://github.com/svitlofour/app/issues/215" });
+    // The saved proof still counts when only the status changes.
+    expect((await put({ status: "fail" })).status).toBe(200);
+    expect((await put({ status: "fail", evidence: "" })).status).toBe(422);
+    expect((await put({ status: "pass", issueUrl: "javascript:alert(1)" })).status).toBe(422);
+    const noteLeak = await put({ status: "skip", note: "used token gp_aaaaaaaaaaaaaaaaaaaaaaaaaaaa" });
+    expect(noteLeak.body.error.details.reason).toBe("secret_in_evidence");
+  });
+
+  it("treats blocked as a problem that a pass outweighs", async () => {
+    const annaRun = await startRun(anna, "dev", "ios", "iPhone 15");
+    await mark(anna, annaRun, "reply-to-comment", "blocked", "dev backend is down");
+    const cell = (r: any) =>
+      r.scenarios
+        .find((s: { key: string }) => s.key === "reply-to-comment")
+        ?.cells.find((c: { environment: string; platform: string }) => c.environment === "dev" && c.platform === "ios");
+    expect(cell((await call("GET", `/guides/${guideId}/results`, anna)).body).verdict).toBe("blocked");
+    expect((await call("GET", `/runs/${annaRun}`, anna)).body.counts.blocked).toBe(1);
+
+    const bohdanRun = await startRun(bohdan, "dev", "ios", "iPhone 12");
+    await mark(bohdan, bohdanRun, "reply-to-comment", "pass");
+    expect(cell((await call("GET", `/guides/${guideId}/results?filter=all`, anna)).body).verdict).toBe("pass");
   });
 });

@@ -21,6 +21,10 @@ export interface Scenario {
   environments?: string[];
   steps: string[];
   expected: string;
+  /** A pass needs proof (auth, privacy, security checks); a fail always does. */
+  evidence?: boolean;
+  /** Also covered by an automated test (CI job or test name). Shown apart: it doesn't replace a person's pass. */
+  automated?: string;
   deprecated?: { reason: string } | null;
 }
 
@@ -48,10 +52,13 @@ export interface ScenarioDiff {
   unchanged: string[];
 }
 
-/** A scenario is unchanged when everything a tester relies on is the same. */
+/**
+ * A scenario is unchanged when everything a tester relies on is the same.
+ * Starting to require proof changes it too, so passes without proof aren't carried over.
+ */
 export function sameCheck(a: Scenario, b: Scenario): boolean {
   const pick = (s: Scenario) =>
-    JSON.stringify([s.steps, s.expected, s.platforms ?? null, s.environments ?? null]);
+    JSON.stringify([s.steps, s.expected, s.platforms ?? null, s.environments ?? null, !!s.evidence]);
   return pick(a) === pick(b);
 }
 
@@ -87,17 +94,45 @@ export function appliesTo(scenario: Scenario, environment: string, platform: Pla
   );
 }
 
-export type ResultStatus = "pass" | "fail" | "skip";
+/** `blocked`: couldn't be checked because of something outside the scenario (environment down, no test data). */
+export type ResultStatus = "pass" | "fail" | "blocked" | "skip";
 export type Verdict = ResultStatus | "conflict" | "untested";
 
 /**
  * Combines everyone's results for one scenario in one environment on one platform.
  * A pass next to a fail is a conflict: it works for some people or devices and not others.
+ * One person's pass outweighs another's blocked or skipped.
  */
 export function verdict(statuses: ResultStatus[]): Verdict {
   const has = (s: ResultStatus) => statuses.includes(s);
   if (has("fail")) return has("pass") ? "conflict" : "fail";
   if (has("pass")) return "pass";
+  if (has("blocked")) return "blocked";
   if (has("skip")) return "skip";
   return "untested";
+}
+
+/** Whether a result needs proof: every fail, and a pass on a scenario marked `evidence`. */
+export function needsEvidence(scenario: Scenario, status: ResultStatus): boolean {
+  return status === "fail" || (status === "pass" && !!scenario.evidence);
+}
+
+/**
+ * Finds what looks like a secret in text testers paste as proof: bearer tokens,
+ * JWTs, Guidepass and AWS keys. Proof is shared with the team; secrets must be cut out.
+ */
+export function looksLikeSecret(text: string): boolean {
+  return [
+    /\b(Bearer|Basic)\s+[A-Za-z0-9._~+/=-]{20,}/i,
+    /eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\./,
+    /\bgp_[A-Za-z0-9_-]{20,}/,
+    /\b(AKIA|ASIA)[0-9A-Z]{16}\b/,
+    /-----BEGIN [A-Z ]*PRIVATE KEY-----/,
+    /\b(ghp|gho|ghs|github_pat)_[A-Za-z0-9_]{20,}/,
+    /\bxox[abprs]-[A-Za-z0-9-]{10,}/,
+    /\b[sr]k_live_[A-Za-z0-9]{16,}/,
+    /\bAIza[0-9A-Za-z_-]{35}\b/,
+    /["']?(access_token|refresh_token|id_token|api[_-]?key|x-api-key|password|secret)["']?\s*[:=]\s*["']?[A-Za-z0-9._~+/=-]{12,}/i,
+    /[?&](token|access_token|X-Amz-Signature|sig)=[A-Za-z0-9._~%+/=-]{12,}/i,
+  ].some((re) => re.test(text));
 }

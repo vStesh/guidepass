@@ -50,6 +50,7 @@ const texts = {
     problems: "🔴 Run finished with problems",
     failed: (n: number) => `❌ ${n} failed`,
     skipped: (n: number) => `⏭ ${n} skipped`,
+    blocked: (n: number) => `⛔ ${n} blocked`,
     untested: (n: number) => `${n} not checked`,
     test: "✅ Guidepass notifications are set up for",
     types: { feature: "Feature", bugfix: "Bug fix", improvement: "Improvement", mixed: "Mixed" } as Record<GuideType, string>,
@@ -65,6 +66,7 @@ const texts = {
     problems: "🔴 Прохід завершено з проблемами",
     failed: (n: number) => `❌ помилок: ${n}`,
     skipped: (n: number) => `⏭ пропущено: ${n}`,
+    blocked: (n: number) => `⛔ заблоковано: ${n}`,
     untested: (n: number) => `не перевірено: ${n}`,
     test: "✅ Сповіщення Guidepass налаштовано для",
     types: { feature: "Фіча", bugfix: "Виправлення", improvement: "Покращення", mixed: "Змішане" } as Record<GuideType, string>,
@@ -163,10 +165,10 @@ interface RunProblems {
   environment: string;
   platform: string;
   device: string;
-  counts: { fail: number; skip: number; untested: number };
+  counts: { fail: number; blocked: number; skip: number; untested: number };
 }
 
-/** Someone finished a run that has failures or skips. Never throws: the run is already saved. */
+/** Someone finished a run that has failures, blocked or skipped scenarios. Never throws: the run is already saved. */
 export async function announceRunProblems(ctx: NotificationContext, input: RunProblems) {
   try {
     await runProblemsMessage(ctx, input);
@@ -177,13 +179,14 @@ export async function announceRunProblems(ctx: NotificationContext, input: RunPr
 
 async function runProblemsMessage(ctx: NotificationContext, input: RunProblems) {
   const { counts } = input;
-  if (!counts.fail && !counts.skip) return;
+  if (!counts.fail && !counts.blocked && !counts.skip) return;
   const app = await loadApp(ctx.db, input.appId);
   const m = messages(ctx.language);
   const [environment] = await environmentNames(ctx, [input.environment]);
   const platform = app?.platformNames[input.platform] ?? input.platform;
   const parts = [
     counts.fail ? m.failed(counts.fail) : null,
+    counts.blocked ? m.blocked(counts.blocked) : null,
     counts.skip ? m.skipped(counts.skip) : null,
     counts.untested ? m.untested(counts.untested) : null,
   ].filter(Boolean);

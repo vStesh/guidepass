@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import example from "../examples/build-179.json" with { type: "json" };
-import { appliesTo, diffScenarios, validateGuide, verdict, type GuideContent } from "./index.ts";
+import { appliesTo, diffScenarios, looksLikeSecret, needsEvidence, validateGuide, verdict, type GuideContent } from "./index.ts";
 
 const environments = ["dev", "stg", "prod"];
 
@@ -90,6 +90,8 @@ describe("verdict", () => {
     [["pass", "fail"], "conflict"],
     [["fail", "skip"], "fail"],
     [["pass", "skip"], "pass"],
+    [["pass", "blocked"], "pass"],
+    [["blocked", "skip"], "blocked"],
     [["skip"], "skip"],
     [[], "untested"],
   ] as const)("%j → %s", (statuses, expected) => {
@@ -107,3 +109,39 @@ describe("appliesTo", () => {
     expect(appliesTo(stgOnly!, "stg", "android")).toBe(true);
   });
 });
+
+describe("proof", () => {
+  it("makes requiring proof a change, so passes without proof are checked again", () => {
+    const next = structuredClone(example) as GuideContent;
+    next.scenarios[0] = { ...next.scenarios[0]!, evidence: true };
+    expect(diffScenarios(example as GuideContent, next).changed).toEqual([next.scenarios[0]!.key]);
+  });
+
+  const scenario = (example as GuideContent).scenarios[0]!;
+
+  it("is needed for every fail and for passes on evidence scenarios", () => {
+    expect(needsEvidence(scenario, "fail")).toBe(true);
+    expect(needsEvidence(scenario, "pass")).toBe(false);
+    expect(needsEvidence({ ...scenario, evidence: true }, "pass")).toBe(true);
+    expect(needsEvidence({ ...scenario, evidence: true }, "blocked")).toBe(false);
+  });
+
+  it("refuses what looks like a secret, not ordinary request logs", () => {
+    expect(looksLikeSecret("Authorization: Bearer abcdefghijklmnopqrstuvwxyz0123")).toBe(true);
+    expect(looksLikeSecret("token eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.sig")).toBe(true);
+    expect(looksLikeSecret("gp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")).toBe(true);
+    expect(looksLikeSecret("AKIAIOSFODNN7EXAMPLE")).toBe(true);
+    expect(looksLikeSecret("ghp_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")).toBe(true);
+    expect(looksLikeSecret('{"access_token": "abcdefghijklmnop123"}')).toBe(true);
+    expect(looksLikeSecret("https://bucket.s3.amazonaws.com/a.png?X-Amz-Signature=abcdef0123456789abcdef")).toBe(true);
+    expect(looksLikeSecret("GET /reports/42 → 403 {\"error\":\"forbidden\"}, Authorization: Bearer <redacted>")).toBe(false);
+    expect(looksLikeSecret("svt_lambda_gp_reports_filtering_development_v2")).toBe(false);
+  });
+
+  it("accepts evidence and automated in guides", () => {
+    const content = structuredClone(example) as GuideContent;
+    content.scenarios[0] = { ...content.scenarios[0]!, evidence: true, automated: "ci: e2e/replies.spec.ts" };
+    expect(validateGuide(content, { environments: ["dev", "stg"] }).ok).toBe(true);
+  });
+});
+

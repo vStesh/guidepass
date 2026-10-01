@@ -106,13 +106,13 @@ describe("notifications", () => {
 
   it("announces a finished run only when it has problems", async () => {
     const { guideId } = (await call("POST", `/apps/${appId}/guides`, { slug: "build-179", content: example })).body;
-    const clean = (await call("POST", `/guides/${guideId}/runs`, { environment: "dev", platform: "ios", device: "iPhone 15" })).body.run.id;
+    const clean = (await call("POST", `/guides/${guideId}/runs`, { environment: "dev", platform: "ios", device: "iPhone 15", build: "179" })).body.run.id;
     await call("PUT", `/runs/${clean}/results/reply-to-comment`, { status: "pass" });
     await call("PATCH", `/runs/${clean}`, { finished: true });
     expect(sent).toHaveLength(1);
 
-    const bad = (await call("POST", `/guides/${guideId}/runs`, { environment: "dev", platform: "ios", device: "iPhone 12" })).body.run.id;
-    await call("PUT", `/runs/${bad}/results/reply-to-comment`, { status: "fail" });
+    const bad = (await call("POST", `/guides/${guideId}/runs`, { environment: "dev", platform: "ios", device: "iPhone 12", build: "179" })).body.run.id;
+    await call("PUT", `/runs/${bad}/results/reply-to-comment`, { status: "fail", evidence: "Screenshot in #215" });
     await call("PATCH", `/runs/${bad}`, { finished: true });
     expect(sent).toHaveLength(2);
     expect(sent[1]!.text).toContain("Прохід завершено з проблемами");

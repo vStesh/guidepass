@@ -61,7 +61,7 @@ export function Chip({ children, tone = "neutral" }: { children: ReactNode; tone
 
 /** Stacked bar of verdict counts. */
 export function ProgressBar({ counts }: { counts: Partial<Record<Verdict, number>> }) {
-  const order: Verdict[] = ["pass", "conflict", "fail", "skip", "untested"];
+  const order: Verdict[] = ["pass", "conflict", "fail", "blocked", "skip", "untested"];
   const total = order.reduce((sum, v) => sum + (counts[v] ?? 0), 0);
   if (!total) return null;
   return (

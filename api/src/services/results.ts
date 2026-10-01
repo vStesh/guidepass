@@ -29,6 +29,7 @@ export async function loadGuide(db: Db, teamId: string, guideId: string): Promis
 export interface Counts {
   pass: number;
   fail: number;
+  blocked: number;
   skip: number;
   untested: number;
 }
@@ -40,6 +41,9 @@ export interface RunSummary {
   environment: string;
   platform: Platform;
   device: string;
+  build: string | null;
+  commit: string | null;
+  account: string | null;
   startedAt: Date;
   finishedAt: Date | null;
   counts: Counts;
@@ -49,8 +53,13 @@ export interface ScenarioResult {
   runId: string;
   tester: { id: string; name: string | null };
   device: string;
+  build: string | null;
+  commit: string | null;
+  account: string | null;
   status: ResultStatus;
   note: string | null;
+  evidence: string | null;
+  issueUrl: string | null;
   updatedAt: Date;
   /** Set when the result was recorded on an older version where this scenario was the same. */
   fromVersion: number | null;
@@ -67,6 +76,10 @@ export interface ScenarioResults {
   key: string;
   title: string;
   important: boolean;
+  /** A pass needs proof here. */
+  evidence: boolean;
+  /** Automated test that also covers it; not a person's result. */
+  automated: string | null;
   cells: Cell[];
 }
 
@@ -190,8 +203,13 @@ export async function getGuideResults(
             runId: run.id,
             tester: { id: tester.id, name: tester.name ?? tester.email },
             device: run.device,
+            build: run.build,
+            commit: run.commit,
+            account: run.account,
             status: result.status,
             note: result.note,
+            evidence: result.evidence,
+            issueUrl: result.issueUrl,
             updatedAt: result.updatedAt,
             fromVersion: runVersion === versionNumber ? null : runVersion,
           });
@@ -204,12 +222,19 @@ export async function getGuideResults(
         });
       }
     }
-    return { key: scenario.key, title: scenario.title, important: !!scenario.important, cells };
+    return {
+      key: scenario.key,
+      title: scenario.title,
+      important: !!scenario.important,
+      evidence: !!scenario.evidence,
+      automated: scenario.automated ?? null,
+      cells,
+    };
   });
 
   const progress = environments.flatMap((environment) =>
     platforms.map((platform) => {
-      const counts: Record<Verdict, number> = { pass: 0, fail: 0, conflict: 0, skip: 0, untested: 0 };
+      const counts: Record<Verdict, number> = { pass: 0, fail: 0, conflict: 0, blocked: 0, skip: 0, untested: 0 };
       for (const s of scenarios) {
         const cell = s.cells.find((c) => c.environment === environment && c.platform === platform);
         if (cell) counts[cell.verdict]++;
@@ -228,6 +253,9 @@ export async function getGuideResults(
       environment: run.environmentKey,
       platform: run.platform,
       device: run.device,
+      build: run.build,
+      commit: run.commit,
+      account: run.account,
       startedAt: run.startedAt,
       finishedAt: run.finishedAt,
       counts: countRun(content, run.environmentKey, run.platform, resultsByRun.get(run.id) ?? []),
@@ -238,6 +266,7 @@ export async function getGuideResults(
       (c) =>
         c.verdict === "fail" ||
         c.verdict === "conflict" ||
+        c.verdict === "blocked" ||
         c.verdict === "skip" ||
         (s.important && c.verdict === "untested"),
     );
@@ -266,7 +295,7 @@ export function countRun(
   platform: Platform,
   rows: { scenarioKey: string; status: ResultStatus }[],
 ): Counts {
-  const counts: Counts = { pass: 0, fail: 0, skip: 0, untested: 0 };
+  const counts: Counts = { pass: 0, fail: 0, blocked: 0, skip: 0, untested: 0 };
   for (const scenario of content.scenarios) {
     if (!appliesTo(scenario, environment, platform)) continue;
     const status = rows.find((r) => r.scenarioKey === scenario.key)?.status;
