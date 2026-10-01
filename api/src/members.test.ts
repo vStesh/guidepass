@@ -46,6 +46,21 @@ describe("invitations", () => {
     ]);
   });
 
+  it("names the person from the invitation, unless they already have a name", async () => {
+    await call("POST", "/invitations", owner, { email: anna, name: "Anna" });
+    // Inviting again with another spelling updates the pending invitation.
+    const again = await call("POST", "/invitations", owner, { email: anna, name: "Anna K." });
+    expect(again.body.invitation.name).toBe("Anna K.");
+    expect((await call("GET", "/me", anna)).body.user.name).toBe("Anna K.");
+    expect((await call("GET", "/members", owner)).body.members.find((m: { email: string }) => m.email === anna).name).toBe("Anna K.");
+
+    const bob = "bob@example.com";
+    await call("GET", "/me", bob);
+    await call("PATCH", "/me", bob, { name: "Bob" });
+    await call("POST", "/invitations", owner, { email: bob, name: "Robert" });
+    expect((await call("GET", "/me", bob)).body.user.name).toBe("Bob");
+  });
+
   it("joins through any team route, not only /me", async () => {
     await call("POST", "/invitations", owner, { email: anna });
     expect((await call("GET", "/apps", anna)).status).toBe(200);

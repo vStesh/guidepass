@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import { guideTypes } from "@guidepass/schema/core";
 import type { GuideSummary } from "../api.ts";
-import { Chip, ErrorBox, Load, TypeBadge, formatDate } from "../components/ui.tsx";
+import { Chip, ErrorBox, Load, TypeBadge, authorLabel, formatDate } from "../components/ui.tsx";
 import { useI18n } from "../i18n/index.tsx";
 import { useLoad, useSession } from "../session.tsx";
 
@@ -176,6 +176,7 @@ export function GuidesPage() {
                                 ))}
                                 <span>v{g.currentVersion}</span>
                                 <span>{t("app.updated", { date: formatDate(g.updatedAt, locale) })}</span>
+                                {g.updatedBy && <span>{authorLabel(t, g.updatedBy)}</span>}
                               </span>
                             </Link>
                           </li>

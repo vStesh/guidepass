@@ -164,7 +164,7 @@ describe("MCP tools", () => {
 
     const detail = await tool(client, "get_guide", { guideId });
     expect(detail.data.versions[0]).toMatchObject({ version: 2, changeNote: "Fixed reply threading" });
-    expect(detail.data.versions[0].createdByTokenId).toBeTruthy();
+    expect(detail.data.versions[0].author).toMatchObject({ kind: "agent", agent: expect.any(String) });
 
     expect((await tool(client, "set_guide_status", { guideId, status: "archived" })).data.guide.status).toBe("archived");
   });

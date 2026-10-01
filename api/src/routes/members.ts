@@ -18,7 +18,7 @@ memberRoutes.get("/members", async (c) => {
     .from(memberships)
     .innerJoin(users, eq(users.id, memberships.userId))
     .where(eq(memberships.teamId, teamId))
-    .orderBy(asc(users.email));
+    .orderBy(asc(sql`lower(coalesce(${users.name}, ${users.email}))`));
   return c.json({ members: rows });
 });
 
@@ -90,7 +90,7 @@ memberRoutes.get("/invitations", async (c) => {
  */
 memberRoutes.post(
   "/invitations",
-  validate("json", z.object({ email: z.email().max(254), role: role.default("tester") })),
+  validate("json", z.object({ email: z.email().max(254), name: z.string().trim().min(1).max(100).optional(), role: role.default("tester") })),
   async (c) => {
     const { teamId } = await requireMembership(c, "owner");
     const body = c.req.valid("json");
@@ -110,7 +110,17 @@ memberRoutes.post(
 
     // Inviting again resends the temporary password if it was never used.
     const account = await c.var.directory.ensureUser(email);
-    if (pending) return c.json({ invitation: pending, accountCreated: account === "created" });
+    if (pending) {
+      if (body.name && body.name !== pending.name) {
+        const [renamed] = await c.var.db
+          .update(invitations)
+          .set({ name: body.name })
+          .where(eq(invitations.id, pending.id))
+          .returning();
+        return c.json({ invitation: renamed, accountCreated: account === "created" });
+      }
+      return c.json({ invitation: pending, accountCreated: account === "created" });
+    }
 
     if (account === "missing") {
       throw new ApiError(
@@ -122,7 +132,7 @@ memberRoutes.post(
 
     const [invitation] = await c.var.db
       .insert(invitations)
-      .values({ teamId, email, role: body.role, invitedBy: c.var.user.id })
+      .values({ teamId, email, name: body.name ?? null, role: body.role, invitedBy: c.var.user.id })
       .returning();
     return c.json({ invitation, accountCreated: account === "created" }, 201);
   },

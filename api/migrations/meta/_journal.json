@@ -43,6 +43,13 @@
       "when": 1790761680245,
       "tag": "0005_slack",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1790845107876,
+      "tag": "0006_invitation_name",
+      "breakpoints": true
     }
   ]
 }

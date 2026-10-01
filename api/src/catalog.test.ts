@@ -172,4 +172,14 @@ describe("guides across apps", () => {
     expect(page2).toHaveLength(1);
     expect(page1[0].id).not.toBe(page2[0].id);
   });
+
+  it("shows who uploaded each version", async () => {
+    await call("PATCH", "/me", { name: "Volodymyr" });
+    const appId = (await call("POST", "/apps", { slug: "svt", name: "Svitlofour", platforms: ["ios", "android"] })).body.app.id;
+    const guideId = (await call("POST", `/apps/${appId}/guides`, { slug: "build-179", content: example })).body.guideId;
+
+    const author = { kind: "user", userId: `local:${owner}`, name: "Volodymyr" };
+    expect((await call("GET", "/guides")).body.guides[0].updatedBy).toEqual(author);
+    expect((await call("GET", `/guides/${guideId}`)).body.versions[0].author).toEqual(author);
+  });
 });

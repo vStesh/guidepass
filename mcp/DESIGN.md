@@ -63,7 +63,7 @@ Guides of an app, newest first, with progress per platform.
 Full content of one guide version, plus the version history.
 
 - Input: `guideId`; optional `version` (default: current).
-- Output: `guide` (metadata), `version`, `content` (guide JSON), `versions[]` (`version`, `changeNote`, `createdBy`, `createdAt`).
+- Output: `guide` (metadata), `version`, `content` (guide JSON), `versions[]` (`version`, `changeNote`, `author` — `{kind: "user"|"agent", userId, name, agent?}`, `createdAt`).
 
 #### `get_results`
 What people found for a guide: for every scenario and platform, each tester's result with their note and device, plus the combined verdict. This is the tool the agent uses after a test session.

@@ -55,7 +55,15 @@ export interface GuideSummary {
   status: "active" | "archived";
   currentVersion: number;
   updatedAt: string;
+  /** Who uploaded the current version. */
+  updatedBy?: VersionAuthor;
 }
+
+/** A person in the web UI, or an agent acting for the person who issued its token. */
+export type VersionAuthor =
+  | { kind: "user"; userId: string; name: string }
+  | { kind: "agent"; userId: string; name: string; agent: string }
+  | null;
 
 export interface GuideListParams {
   appId?: string;
@@ -73,7 +81,7 @@ export interface GuideDetail {
   guide: GuideSummary & { appId: string };
   version: number;
   content: GuideContent;
-  versions: { version: number; changeNote: string | null; createdAt: string }[];
+  versions: { version: number; changeNote: string | null; createdAt: string; author: VersionAuthor }[];
 }
 
 export interface Counts {
@@ -145,6 +153,7 @@ export interface Member {
 export interface Invitation {
   id: string;
   email: string;
+  name: string | null;
   role: Role;
   createdAt: string;
 }
@@ -256,8 +265,12 @@ export function createApi(auth: Auth) {
       request<unknown>("PATCH", `/members/${encodeURIComponent(userId)}`, { role }),
     removeMember: (userId: string) => request<unknown>("DELETE", `/members/${encodeURIComponent(userId)}`),
     invitations: () => request<{ invitations: Invitation[] }>("GET", "/invitations"),
-    invite: (email: string, role: Role) =>
-      request<{ invitation: Invitation; accountCreated: boolean }>("POST", "/invitations", { email, role }),
+    invite: (email: string, name: string, role: Role) =>
+      request<{ invitation: Invitation; accountCreated: boolean }>("POST", "/invitations", {
+        email,
+        name: name.trim() || undefined,
+        role,
+      }),
     revokeInvitation: (id: string) => request<unknown>("DELETE", `/invitations/${id}`),
 
     agentTokens: () => request<{ tokens: AgentToken[] }>("GET", "/agent-tokens"),

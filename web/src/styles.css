@@ -231,3 +231,14 @@ a.list-item:hover { border-color: var(--line-strong); box-shadow: var(--shadow);
 .connect-steps p { margin: 4px 0; }
 .connect-steps .button { margin-top: 6px; }
 .connect-steps ul { margin: 4px 0 0; padding-left: 1.1rem; }
+
+.ask-name { border-color: var(--accent); }
+.author-line { margin: 0 0 0.25rem; }
+.history { margin: 0.5rem 0 0; padding-left: 1.25rem; display: flex; flex-direction: column; gap: 6px; }
+.footer {
+  max-width: 960px; margin: 0 auto; padding: 20px 16px 32px;
+  border-top: 1px solid var(--line); color: var(--muted); font-size: 0.85rem;
+}
+.footer p { margin: 0.5rem 0 0; }
+.footer a { color: inherit; }
+.footer-links { display: flex; flex-wrap: wrap; gap: 6px 16px; }

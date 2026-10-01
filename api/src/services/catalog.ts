@@ -1,12 +1,38 @@
 import { and, asc, count, desc, eq, ilike, or, sql } from "drizzle-orm";
 import type { GuideType } from "@guidepass/schema";
 import type { Db } from "../db/client.ts";
-import { apps, areas, guideVersions, guides, type GuideStatus } from "../db/schema.ts";
+import { alias } from "drizzle-orm/pg-core";
+import { agentTokens, apps, areas, guideVersions, guides, users, type GuideStatus } from "../db/schema.ts";
 import { ApiError, isUniqueViolation } from "../errors.ts";
 import { publicApp } from "./notifications.ts";
 
 // Reads and writes shared by the web API and the MCP server. Every function is
 // scoped to one team.
+
+/** Who uploaded a version: a person in the web UI, or an agent acting for the person who issued its token. */
+export type VersionAuthor =
+  | { kind: "user"; userId: string; name: string }
+  | { kind: "agent"; userId: string; name: string; agent: string }
+  | null;
+
+const authorUser = alias(users, "author_user");
+const tokenOwner = alias(users, "token_owner");
+
+const authorColumns = {
+  userId: authorUser.id,
+  userName: sql<string | null>`coalesce(${authorUser.name}, ${authorUser.email})`,
+  tokenName: agentTokens.name,
+  tokenOwnerId: tokenOwner.id,
+  tokenOwnerName: sql<string | null>`coalesce(${tokenOwner.name}, ${tokenOwner.email})`,
+};
+
+type AuthorRow = { userId: string | null; userName: string | null; tokenName: string | null; tokenOwnerId: string | null; tokenOwnerName: string | null };
+
+function toAuthor(row: AuthorRow): VersionAuthor {
+  if (row.userId) return { kind: "user", userId: row.userId, name: row.userName ?? "?" };
+  if (row.tokenOwnerId) return { kind: "agent", userId: row.tokenOwnerId, name: row.tokenOwnerName ?? "?", agent: row.tokenName ?? "?" };
+  return null;
+}
 
 export async function getApp(db: Db, teamId: string, appId: string) {
   const [app] = await db
@@ -83,7 +109,7 @@ export async function listGuides(db: Db, teamId: string, query: GuideFilters = {
     filters.push(or(ilike(guides.title, pattern), ilike(guides.slug, pattern), ilike(guides.build, pattern))!);
   }
 
-  return db
+  const rows = await db
     .select({
       id: guides.id,
       slug: guides.slug,
@@ -99,13 +125,23 @@ export async function listGuides(db: Db, teamId: string, query: GuideFilters = {
       status: guides.status,
       currentVersion: guides.currentVersion,
       updatedAt: guides.updatedAt,
+      ...authorColumns,
     })
     .from(guides)
     .innerJoin(apps, eq(apps.id, guides.appId))
+    .innerJoin(guideVersions, and(eq(guideVersions.guideId, guides.id), eq(guideVersions.version, guides.currentVersion)))
+    .leftJoin(authorUser, eq(authorUser.id, guideVersions.createdByUserId))
+    .leftJoin(agentTokens, eq(agentTokens.id, guideVersions.createdByTokenId))
+    .leftJoin(tokenOwner, eq(tokenOwner.id, agentTokens.createdBy))
     .where(and(...filters))
     .orderBy(desc(guides.updatedAt), desc(guides.id))
     .limit(query.limit ?? 20)
     .offset(query.offset ?? 0);
+  // `updatedBy` is the author of the current version.
+  return rows.map(({ userId, userName, tokenName, tokenOwnerId, tokenOwnerName, ...guide }) => ({
+    ...guide,
+    updatedBy: toAuthor({ userId, userName, tokenName, tokenOwnerId, tokenOwnerName }),
+  }));
 }
 
 /** One version of a guide (the current one by default) and the version history. */
@@ -117,17 +153,23 @@ export async function getGuideDetail(db: Db, teamId: string, guideId: string, ve
     .where(and(eq(guides.id, guideId), eq(apps.teamId, teamId)));
   if (!row) throw new ApiError("not_found", "Guide not found.");
 
-  const versions = await db
+  const versionRows = await db
     .select({
       version: guideVersions.version,
       changeNote: guideVersions.changeNote,
-      createdByUserId: guideVersions.createdByUserId,
-      createdByTokenId: guideVersions.createdByTokenId,
       createdAt: guideVersions.createdAt,
+      ...authorColumns,
     })
     .from(guideVersions)
+    .leftJoin(authorUser, eq(authorUser.id, guideVersions.createdByUserId))
+    .leftJoin(agentTokens, eq(agentTokens.id, guideVersions.createdByTokenId))
+    .leftJoin(tokenOwner, eq(tokenOwner.id, agentTokens.createdBy))
     .where(eq(guideVersions.guideId, row.guide.id))
     .orderBy(desc(guideVersions.version));
+  const versions = versionRows.map(({ userId, userName, tokenName, tokenOwnerId, tokenOwnerName, ...v }) => ({
+    ...v,
+    author: toAuthor({ userId, userName, tokenName, tokenOwnerId, tokenOwnerName }),
+  }));
 
   const wanted = version ?? row.guide.currentVersion;
   const [selected] = await db

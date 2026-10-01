@@ -73,8 +73,9 @@ export function TeamPage() {
                   <ul className="list">
                     {invitations.map((i) => (
                       <li key={i.id} className="list-item list-item-static">
-                        <span className="list-title">{i.email}</span>
+                        <span className="list-title">{i.name ?? i.email}</span>
                         <span className="list-meta">
+                          {i.name && <span>{i.email}</span>}
                           <span>{t(`team.role.${i.role}`)}</span>
                           <span>{formatDate(i.createdAt, locale)}</span>
                           <button type="button" className="button button-small button-ghost" onClick={act(() => api.revokeInvitation(i.id))}>
@@ -108,6 +109,7 @@ function InviteForm({ onInvited }: { onInvited: () => void }) {
   const { t } = useI18n();
   const { api } = useSession();
   const [email, setEmail] = useState("");
+  const [name, setName] = useState("");
   const [role, setRole] = useState<Role>("tester");
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<unknown>(null);
@@ -117,9 +119,10 @@ function InviteForm({ onInvited }: { onInvited: () => void }) {
     setError(null);
     setMessage(null);
     try {
-      const res = await api.invite(email, role);
+      const res = await api.invite(email, name, role);
       setMessage(t(res.accountCreated ? "team.inviteCreated" : "team.inviteExisting", { email: res.invitation.email }));
       setEmail("");
+      setName("");
       onInvited();
     } catch (err) {
       setError(err);
@@ -132,6 +135,7 @@ function InviteForm({ onInvited }: { onInvited: () => void }) {
       <p className="muted">{t("team.inviteHint")}</p>
       <div className="inline-form">
         <input type="email" required placeholder="name@example.com" value={email} onChange={(e) => setEmail(e.target.value)} aria-label="Email" />
+        <input maxLength={100} placeholder={t("team.inviteName")} value={name} onChange={(e) => setName(e.target.value)} aria-label={t("profile.name")} />
         <select value={role} onChange={(e) => setRole(e.target.value as Role)} aria-label={t("team.members")}>
           <option value="tester">{t("team.role.tester")}</option>
           <option value="owner">{t("team.role.owner")}</option>
