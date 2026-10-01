@@ -44,14 +44,14 @@ Use **bold** for the one or two things that matter most. Put code names (functio
 **`prerequisites`** — everything the tester must have before starting, as a checklist:
 - minimum build and platforms;
 - anything environment-specific: which backend version must be deployed there, which test accounts exist there;
-- accounts and roles, and how many devices (for example, two accounts on two devices for anything involving another user);
+- accounts and roles, and how many devices (for example, two accounts on two devices for anything involving another user); name them the way testers will record them in a run (for example "A — author", "B — moderator");
 - conditions to reproduce (airplane mode, a location, a specific kind of data).
 
 **`related`** — PR, issue, commit, changelog and design-doc references, with URLs where there are any.
 
 ## 4. Scenarios
 
-Aim for 5–12 scenarios. More than that usually means the guide covers two changes and should be split.
+Aim for 5–12 scenarios. More than that usually means the guide covers two changes and should be split. Separate areas (for example auth, a mobile smoke test, replies) get separate guides, each for the build under test in development; checks after a production release go in a guide of their own.
 
 Order them like this:
 1. the main happy path of the change;
@@ -67,6 +67,8 @@ For each scenario:
 - **`important: true`** — for the one to three checks that must pass before the build can go further. Usually the main happy path and the riskiest edge case.
 - **`platforms`** — set only when the scenario applies to some of the app's platforms (`["android"]`). Leave it out when it applies to all. Use the app's platform keys from `list_apps`: built-in `ios`, `android`, `web`, `api`, and the app's own (for example `admin`). **Backend-only changes** (a Lambda, an API endpoint, a migration) get `platforms: ["api"]` — only if the app has the `api` platform in `list_apps`; if it doesn't, ask the user to add it on the app page first: the tester checks them with an HTTP client, logs or the database, and the steps say exactly what to call or look at. If a backend change is also visible in the apps, add a separate scenario for that on the app platforms.
 - **`environments`** — set only when the scenario applies to some of the guide's environments. Leave it out when it applies to all.
+- **`evidence: true`** — for auth, privacy and security checks, where a pass must be proven: the tester attaches a sanitized request and response, a CI link, a screenshot or a video. Every fail needs proof anyway. Say in `expected` what the proof should show (for example "403 for another user's report").
+- **`automated`** — if an automated test also covers the scenario, name it (CI job, test file). It is shown apart from people's results and never counts as a pass: the scenario is still checked on a device.
 - **`steps`** — 1–4 imperative steps. Name who does what when there is more than one account ("A writes a comment", "B taps Reply"). Use the exact labels the user sees on screen, in quotes.
 - **`expected`** — what the tester must see, concretely enough to decide pass or fail without asking anyone. Include what must *not* happen when that is the risk ("the drawer does not open", "only one reply appears, not two"). If the result persists, say to reopen the screen and check again.
 
@@ -89,4 +91,5 @@ Check that:
 - every `key` is unique in the guide;
 - every scenario can be passed or failed from its `expected` alone;
 - prerequisites cover every account, device and condition the steps mention;
-- nothing in the guide asks the tester to handle real secrets or real payment details — use test accounts and test cards, and say where to get them.
+- nothing in the guide asks the tester to handle real secrets or real payment details — use test accounts and test cards, and say where to get them;
+- the guide doesn't claim anything was tested: writing a scenario is not a pass. Only testers mark results, with the build or commit and the account they used.

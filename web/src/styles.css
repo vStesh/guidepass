@@ -18,6 +18,8 @@
   --conflict: #8b3fa8;
   --conflict-bg: #f3e6f8;
   --skip: #8a6300;
+  --blocked: #6b21a8;
+  --blocked-bg: #f1e7fb;
   --skip-bg: #f7eed5;
   --untested: #6b776f;
   --untested-bg: #eceee9;
@@ -48,6 +50,8 @@
     --conflict: #d8a0f0;
     --conflict-bg: #33203d;
     --skip: #fbbf24;
+    --blocked: #c4a5f5;
+    --blocked-bg: #2a1a40;
     --skip-bg: #352a10;
     --untested: #9aa89f;
     --untested-bg: #1f2824;
@@ -165,6 +169,7 @@ a.list-item:hover { border-color: var(--line-strong); box-shadow: var(--shadow);
 .badge-fail { background: var(--fail-bg); color: var(--fail); }
 .badge-conflict { background: var(--conflict-bg); color: var(--conflict); }
 .badge-skip { background: var(--skip-bg); color: var(--skip); }
+.badge-blocked { background: var(--blocked-bg); color: var(--blocked); }
 .badge-untested { background: var(--untested-bg); color: var(--untested); }
 
 .bar { display: flex; height: 7px; border-radius: 4px; overflow: hidden; background: var(--untested-bg); min-width: 60px; }
@@ -173,6 +178,7 @@ a.list-item:hover { border-color: var(--line-strong); box-shadow: var(--shadow);
 .bar-fail { background: var(--fail); }
 .bar-conflict { background: var(--conflict); }
 .bar-skip { background: var(--skip); }
+.bar-blocked { background: var(--blocked); }
 .bar-untested { background: transparent; }
 
 .start-run { margin: 1rem 0; display: flex; flex-direction: column; gap: 12px; }
@@ -213,11 +219,19 @@ a.list-item:hover { border-color: var(--line-strong); box-shadow: var(--shadow);
 .run-card-pass { border-left-color: var(--pass); }
 .run-card-fail { border-left-color: var(--fail); }
 .run-card-skip { border-left-color: var(--skip); }
-.segmented-status { width: 100%; }
-.segmented-status button { flex: 1; padding: 11px 8px; }
+.run-card-blocked { border-left-color: var(--blocked); }
+.segmented-status { width: 100%; display: grid; grid-template-columns: repeat(4, 1fr); }
+.segmented-status button { padding: 11px 6px; }
+/* Four statuses don't fit one row on a phone: two rows of two, big enough to tap. */
+@media (max-width: 560px) {
+  .segmented-status { grid-template-columns: 1fr 1fr; }
+  .segmented-status button:nth-child(2n) { border-right: 0; }
+  .segmented-status button:nth-child(-n + 2) { border-bottom: 1px solid var(--line-strong); }
+}
 .segmented-status .status-pass[aria-pressed="true"] { background: var(--pass); color: #fff; }
 .segmented-status .status-fail[aria-pressed="true"] { background: var(--fail); color: #fff; }
 .segmented-status .status-skip[aria-pressed="true"] { background: var(--skip); color: #fff; }
+.segmented-status .status-blocked[aria-pressed="true"] { background: var(--blocked); color: #fff; }
 .run-footer { position: sticky; bottom: 0; padding: 12px 0 calc(12px + env(safe-area-inset-bottom)); background: var(--page); }
 .run-footer .button { width: 100%; padding: 12px; }
 .command { display: block; padding: 8px 10px; border-radius: 6px; background: var(--surface); color: var(--text); word-break: break-all; font-size: 0.82rem; }
@@ -242,3 +256,8 @@ a.list-item:hover { border-color: var(--line-strong); box-shadow: var(--shadow);
 .footer p { margin: 0.5rem 0 0; }
 .footer a { color: inherit; }
 .footer-links { display: flex; flex-wrap: wrap; gap: 6px 16px; }
+
+.proof { display: flex; flex-direction: column; gap: 4px; font-size: 0.9rem; }
+.proof p { margin: 0; }
+.proof-edit summary { cursor: pointer; color: var(--muted); font-size: 0.9rem; }
+.proof-edit .field { margin-top: 0.5rem; }

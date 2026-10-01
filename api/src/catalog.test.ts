@@ -58,7 +58,7 @@ describe("platforms", () => {
   it("changes platforms, but keeps the ones that have runs", async () => {
     const appId = (await call("POST", "/apps", { slug: "svt", name: "S", platforms: ["ios", "android"] })).body.app.id;
     const guideId = (await call("POST", `/apps/${appId}/guides`, { slug: "build-179", content: example })).body.guideId;
-    await call("POST", `/guides/${guideId}/runs`, { environment: "dev", platform: "ios", device: "iPhone" });
+    await call("POST", `/guides/${guideId}/runs`, { environment: "dev", platform: "ios", device: "iPhone", build: "179" });
 
     const added = await call("PATCH", `/apps/${appId}`, { platforms: ["ios", "android", "api"] });
     expect(added.body.app.platforms).toEqual(["ios", "android", "api"]);
@@ -90,7 +90,7 @@ describe("platforms", () => {
   it("starts runs on the api platform", async () => {
     const appId = (await call("POST", "/apps", { slug: "svt", name: "S", platforms: ["ios", "android", "api"] })).body.app.id;
     const guideId = (await call("POST", `/apps/${appId}/guides`, { slug: "build-179", content: example })).body.guideId;
-    const run = await call("POST", `/guides/${guideId}/runs`, { environment: "dev", platform: "api", device: "Postman" });
+    const run = await call("POST", `/guides/${guideId}/runs`, { environment: "dev", platform: "api", device: "Postman", build: "179" });
     expect(run.status).toBe(201);
     expect(run.body.run.platform).toBe("api");
   });

@@ -185,8 +185,8 @@ describe("MCP tools", () => {
     expect(uploaded.data.url).toBe(`https://gp.example.com/guides/${guideId}`);
 
     // A person tests; the agent only reads.
-    const run = await call("POST", `/guides/${guideId}/runs`, { environment: "dev", platform: "ios", device: "iPhone 15" });
-    await call("PUT", `/runs/${run.body.run.id}/results/reply-to-comment`, { status: "fail", note: "Wrong thread" });
+    const run = await call("POST", `/guides/${guideId}/runs`, { environment: "dev", platform: "ios", device: "iPhone 15", build: "179" });
+    await call("PUT", `/runs/${run.body.run.id}/results/reply-to-comment`, { status: "fail", note: "Wrong thread", evidence: "Screenshot in #215" });
 
     const results = await tool(client, "get_results", { guideId });
     const reply = results.data.scenarios.find((s: { key: string }) => s.key === "reply-to-comment");

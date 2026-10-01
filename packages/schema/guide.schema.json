@@ -85,6 +85,17 @@
         },
         "steps": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
         "expected": { "type": "string", "minLength": 1 },
+        "evidence": {
+          "type": "boolean",
+          "default": false,
+          "description": "A pass needs proof: a sanitized request and response, a CI link, a screenshot or a video. Use for auth, privacy and security checks. A fail always needs proof."
+        },
+        "automated": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300,
+          "description": "Also covered by an automated test: CI job, test file or name. Shown apart from people's results; it doesn't replace a pass on a device."
+        },
         "deprecated": {
           "type": ["object", "null"],
           "additionalProperties": false,

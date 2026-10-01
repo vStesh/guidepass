@@ -1,4 +1,4 @@
-import { appliesTo } from "@guidepass/schema";
+import { appliesTo, looksLikeSecret, needsEvidence } from "@guidepass/schema";
 import { and, eq, isNotNull, isNull } from "drizzle-orm";
 import { Hono } from "hono";
 import { z } from "zod";
@@ -21,7 +21,16 @@ runRoutes.post(
   guideParam,
   validate(
     "json",
-    z.object({ environment: z.string().min(1), platform, device: z.string().trim().min(1).max(100) }),
+    z
+      .object({
+        environment: z.string().min(1),
+        platform,
+        device: z.string().trim().min(1).max(100),
+        build: z.string().trim().max(60).optional(),
+        commit: z.string().trim().max(60).optional(),
+        account: z.string().trim().max(100).optional(),
+      })
+      .refine((b) => b.build || b.commit, { message: "Give the build or the commit you are testing.", path: ["build"] }),
   ),
   async (c) => {
     const { teamId } = await requireMembership(c);
@@ -50,6 +59,9 @@ runRoutes.post(
         environmentKey: body.environment,
         platform: body.platform,
         device: body.device,
+        build: body.build || null,
+        commit: body.commit || null,
+        account: body.account || null,
       })
       .returning();
     return c.json({ run: { ...run, version: guide.currentVersion } }, 201);
@@ -116,8 +128,10 @@ runRoutes.put(
   validate(
     "json",
     z.object({
-      status: z.enum(["pass", "fail", "skip", "untested"]),
+      status: z.enum(["pass", "fail", "blocked", "skip", "untested"]),
       note: z.string().trim().max(2000).optional(),
+      evidence: z.string().trim().max(4000).optional(),
+      issueUrl: z.union([z.literal(""), z.url({ protocol: /^https?$/ }).max(500)]).optional(),
     }),
   ),
   async (c) => {
@@ -132,19 +146,39 @@ runRoutes.put(
       throw new ApiError("invalid", `Scenario ${scenarioKey} does not apply to this run.`);
     }
 
-    const { status, note } = c.req.valid("json");
+    const { status, note, evidence, issueUrl } = c.req.valid("json");
     const where = and(eq(results.runId, runId), eq(results.scenarioKey, scenarioKey));
     if (status === "untested") {
       await c.var.db.delete(results).where(where);
       return c.json({ result: null });
     }
-    // An omitted note keeps the existing one; an empty note clears it.
+    // Notes and proof are shown to the team and to agents: no secrets in them.
+    if ([evidence, note, issueUrl].some((text) => text && looksLikeSecret(text))) {
+      throw new ApiError("invalid", "This looks like it contains a token or key. Cut secrets out before saving.", {
+        reason: "secret_in_evidence",
+      });
+    }
+    // An omitted field keeps the existing value; an empty one clears it.
+    const [existing] = await c.var.db.select().from(results).where(where);
+    const nextEvidence = evidence !== undefined ? evidence || null : (existing?.evidence ?? null);
+    if (needsEvidence(scenario, status) && !nextEvidence) {
+      throw new ApiError(
+        "invalid",
+        status === "fail" ? "A fail needs proof." : "This scenario needs proof for a pass.",
+        { reason: "evidence_required" },
+      );
+    }
+    const fields = {
+      ...(note !== undefined ? { note: note || null } : {}),
+      ...(evidence !== undefined ? { evidence: evidence || null } : {}),
+      ...(issueUrl !== undefined ? { issueUrl: issueUrl || null } : {}),
+    };
     const [result] = await c.var.db
       .insert(results)
-      .values({ runId, scenarioKey, status, note: note || null })
+      .values({ runId, scenarioKey, status, ...fields })
       .onConflictDoUpdate({
         target: [results.runId, results.scenarioKey],
-        set: { status, updatedAt: new Date(), ...(note !== undefined ? { note: note || null } : {}) },
+        set: { status, updatedAt: new Date(), ...fields },
       })
       .returning();
     return c.json({ result });

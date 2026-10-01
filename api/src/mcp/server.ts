@@ -160,7 +160,7 @@ function buildServer({ db, guideLanguage, publicUrl, notifier }: McpDeps, agent:
     "get_results",
     {
       description:
-        "What people found: for every scenario and environment × platform, each tester's result with note and device, plus a combined verdict (pass, fail, conflict = passed for some and failed for others, skip, untested). By default only problems: fail, conflict, skip, and key scenarios still untested.",
+        "What people found on devices: for every scenario and environment × platform, each tester's result with the build or commit they tested, the app account and role they used, device, note, proof and issue link, plus a combined verdict (pass, fail, conflict = passed for some and failed for others, blocked = couldn't be checked, skip, untested). Only people mark results: a scenario without one is untested, whatever the guide says; `automated` names a test that also covers it but is not a result. By default only problems: fail, conflict, blocked, skip, and key scenarios still untested.",
       inputSchema: {
         guideId: z.uuid(),
         version: versionNumber.optional().describe("Default: current version"),

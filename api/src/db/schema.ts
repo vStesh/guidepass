@@ -173,6 +173,11 @@ export const runs = pgTable("runs", {
   environmentKey: text("environment_key").notNull().references(() => environments.key),
   platform: text("platform").$type<Platform>().notNull(),
   device: text("device").notNull(),
+  /** The build actually tested, which may be newer than the guide's. At least one of build and commit. */
+  build: text("build"),
+  commit: text("commit"),
+  /** The app account used and its role, e.g. "moderator (B)". */
+  account: text("account"),
   startedAt: createdAt(),
   finishedAt: timestamp("finished_at", { withTimezone: true }),
 });
@@ -186,6 +191,9 @@ export const results = pgTable(
     scenarioKey: text("scenario_key").notNull(),
     status: text("status").$type<ResultStatus>().notNull(),
     note: text("note"),
+    /** Proof: a sanitized request and response, a CI link, links to screenshots. Required for fails. */
+    evidence: text("evidence"),
+    issueUrl: text("issue_url"),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [primaryKey({ columns: [t.runId, t.scenarioKey] })],
