@@ -9,8 +9,9 @@ Requirements: Node.js 22+, Terraform 1.9+, AWS credentials for the target accoun
 The credentials need the permissions in [`deploy-policy.json`](deploy-policy.json): everything Terraform creates, with IAM roles, Lambda functions, log groups and S3 buckets limited to names starting with `gp-` (keep `name_prefix` starting with `gp-`). A dedicated IAM user with only this policy is a good fit.
 
 ```bash
-# 1. Build the Lambda bundles (api/dist) and the web app (web/dist)
-npm ci && npm run build
+# 1. Install dependencies. tf.sh builds the Lambda bundles (api/dist) and the
+#    web app (web/dist) before every plan and apply, so the deploy matches the code.
+npm ci
 
 # 2. Per instance, two small files next to this README (both ignored by git):
 cd infra

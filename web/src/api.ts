@@ -162,6 +162,9 @@ export interface AgentToken {
   id: string;
   name: string;
   scope: "read" | "write";
+  /** The member the agent acts for. */
+  userId: string;
+  userName?: string;
   createdAt: string;
   lastUsedAt: string | null;
 }
@@ -274,8 +277,10 @@ export function createApi(auth: Auth) {
     revokeInvitation: (id: string) => request<unknown>("DELETE", `/invitations/${id}`),
 
     agentTokens: () => request<{ tokens: AgentToken[] }>("GET", "/agent-tokens"),
-    createAgentToken: (name: string, scope: AgentToken["scope"]) =>
-      request<{ token: AgentToken & { token: string } }>("POST", "/agent-tokens", { name, scope }),
+    createAgentToken: (name: string, scope: AgentToken["scope"], userId: string) =>
+      request<{ token: AgentToken & { token: string } }>("POST", "/agent-tokens", { name, scope, userId }),
+    setTokenHolder: (id: string, userId: string, includePastUploads: boolean) =>
+      request<{ movedUploads: number }>("PATCH", `/agent-tokens/${id}`, { userId, includePastUploads }),
     revokeAgentToken: (id: string) => request<unknown>("DELETE", `/agent-tokens/${id}`),
   };
 }

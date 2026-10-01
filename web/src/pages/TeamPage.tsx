@@ -88,7 +88,7 @@ export function TeamPage() {
                 ) : (
                   <p className="muted">{t("team.noPending")}</p>
                 )}
-                <AgentTokens />
+                <AgentTokens key={members.map((m) => m.id).join()} members={members} />
               </>
             )}
           </>

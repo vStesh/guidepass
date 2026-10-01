@@ -19,10 +19,10 @@ const clients: Client[] = [];
 
 const owner = "owner@example.com";
 
-async function call(method: string, path: string, body?: unknown) {
+async function call(method: string, path: string, body?: unknown, as = owner) {
   const response = await api.request(path, {
     method,
-    headers: { "content-type": "application/json", "x-local-user": owner },
+    headers: { "content-type": "application/json", "x-local-user": as },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   return { status: response.status, body: (await response.json()) as any };
@@ -79,6 +79,55 @@ describe("agent tokens", () => {
       body: "{}",
     }));
     expect(response.status).toBe(401);
+  });
+
+  it("are held by a member: uploads show as theirs, and removing them revokes the token", async () => {
+    const tester = "anna@example.com";
+    await call("POST", "/invitations", { email: tester, name: "Anna" });
+    await call("GET", "/me", undefined, tester);
+    const testerId = `local:${tester}`;
+
+    expect((await call("POST", "/agent-tokens", { name: "x", scope: "write", userId: "local:stranger@example.com" })).status).toBe(422);
+    // Given to Anna under the owner's name by mistake: her first upload shows as the owner's.
+    const created = await call("POST", "/agent-tokens", { name: "Anna's Claude", scope: "write" });
+    const tokenId = created.body.token.id;
+    const client = await connect(created.body.token.token);
+    const v1 = await tool(client, "upload_guide", { appId, slug: "build-179", content: example });
+    const guideId = v1.data.guideId;
+    const authors = async () =>
+      (await call("GET", `/guides/${guideId}`)).body.versions.map((v: { author: { name: string } }) => v.author.name);
+    expect(await authors()).toEqual(["owner@example.com"]);
+
+    // Handing it over changes new uploads only…
+    expect((await call("PATCH", `/agent-tokens/${tokenId}`, { userId: testerId })).body.movedUploads).toBe(0);
+    expect((await call("GET", "/agent-tokens")).body.tokens[0]).toMatchObject({ userId: testerId, userName: "Anna" });
+    const next = structuredClone(example);
+    next.scenarios[0]!.expected = "Changed.";
+    const v2 = await tool(client, "upload_guide", { appId, slug: "build-179", content: next, baseVersion: 1, changeNote: "x" });
+    expect(v2.data.version).toBe(2);
+    expect(await authors()).toEqual(["Anna", "owner@example.com"]);
+    expect((await call("GET", `/guides/${guideId}`)).body.versions[0].author).toEqual({
+      kind: "agent",
+      userId: testerId,
+      name: "Anna",
+      agent: "Anna's Claude",
+    });
+
+    // …unless the owner moves the past uploads too (only those of the previous holder).
+    await call("PATCH", `/agent-tokens/${tokenId}`, { userId: `local:${owner}` });
+    const back = await call("PATCH", `/agent-tokens/${tokenId}`, { userId: testerId, includePastUploads: true });
+    expect(back.body.movedUploads).toBe(1);
+    expect(await authors()).toEqual(["Anna", "Anna"]);
+
+    // Removing Anna revokes her token.
+    await call("DELETE", `/members/${encodeURIComponent(testerId)}`);
+    expect((await call("GET", "/agent-tokens")).body.tokens).toHaveLength(0);
+    const after = await mcp(new Request("http://guidepass.test/mcp", {
+      method: "POST",
+      headers: { authorization: `Bearer ${created.body.token.token}`, "content-type": "application/json" },
+      body: "{}",
+    }));
+    expect(after.status).toBe(401);
   });
 
   it("rejects requests without a token", async () => {

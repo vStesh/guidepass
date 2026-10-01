@@ -9,29 +9,27 @@ import { publicApp } from "./notifications.ts";
 // Reads and writes shared by the web API and the MCP server. Every function is
 // scoped to one team.
 
-/** Who uploaded a version: a person in the web UI, or an agent acting for the person who issued its token. */
+/** Who uploaded a version: a person in the web UI, or their agent through MCP (recorded at upload). */
 export type VersionAuthor =
   | { kind: "user"; userId: string; name: string }
   | { kind: "agent"; userId: string; name: string; agent: string }
   | null;
 
 const authorUser = alias(users, "author_user");
-const tokenOwner = alias(users, "token_owner");
 
 const authorColumns = {
   userId: authorUser.id,
   userName: sql<string | null>`coalesce(${authorUser.name}, ${authorUser.email})`,
+  tokenId: agentTokens.id,
   tokenName: agentTokens.name,
-  tokenOwnerId: tokenOwner.id,
-  tokenOwnerName: sql<string | null>`coalesce(${tokenOwner.name}, ${tokenOwner.email})`,
 };
 
-type AuthorRow = { userId: string | null; userName: string | null; tokenName: string | null; tokenOwnerId: string | null; tokenOwnerName: string | null };
+type AuthorRow = { userId: string | null; userName: string | null; tokenId: string | null; tokenName: string | null };
 
-function toAuthor(row: AuthorRow): VersionAuthor {
-  if (row.userId) return { kind: "user", userId: row.userId, name: row.userName ?? "?" };
-  if (row.tokenOwnerId) return { kind: "agent", userId: row.tokenOwnerId, name: row.tokenOwnerName ?? "?", agent: row.tokenName ?? "?" };
-  return null;
+function toAuthor({ userId, userName, tokenId, tokenName }: AuthorRow): VersionAuthor {
+  if (!userId) return null;
+  const name = userName ?? "?";
+  return tokenId ? { kind: "agent", userId, name, agent: tokenName ?? "?" } : { kind: "user", userId, name };
 }
 
 export async function getApp(db: Db, teamId: string, appId: string) {
@@ -132,15 +130,14 @@ export async function listGuides(db: Db, teamId: string, query: GuideFilters = {
     .innerJoin(guideVersions, and(eq(guideVersions.guideId, guides.id), eq(guideVersions.version, guides.currentVersion)))
     .leftJoin(authorUser, eq(authorUser.id, guideVersions.createdByUserId))
     .leftJoin(agentTokens, eq(agentTokens.id, guideVersions.createdByTokenId))
-    .leftJoin(tokenOwner, eq(tokenOwner.id, agentTokens.createdBy))
     .where(and(...filters))
     .orderBy(desc(guides.updatedAt), desc(guides.id))
     .limit(query.limit ?? 20)
     .offset(query.offset ?? 0);
   // `updatedBy` is the author of the current version.
-  return rows.map(({ userId, userName, tokenName, tokenOwnerId, tokenOwnerName, ...guide }) => ({
+  return rows.map(({ userId, userName, tokenId, tokenName, ...guide }) => ({
     ...guide,
-    updatedBy: toAuthor({ userId, userName, tokenName, tokenOwnerId, tokenOwnerName }),
+    updatedBy: toAuthor({ userId, userName, tokenId, tokenName }),
   }));
 }
 
@@ -163,12 +160,11 @@ export async function getGuideDetail(db: Db, teamId: string, guideId: string, ve
     .from(guideVersions)
     .leftJoin(authorUser, eq(authorUser.id, guideVersions.createdByUserId))
     .leftJoin(agentTokens, eq(agentTokens.id, guideVersions.createdByTokenId))
-    .leftJoin(tokenOwner, eq(tokenOwner.id, agentTokens.createdBy))
     .where(eq(guideVersions.guideId, row.guide.id))
     .orderBy(desc(guideVersions.version));
-  const versions = versionRows.map(({ userId, userName, tokenName, tokenOwnerId, tokenOwnerName, ...v }) => ({
+  const versions = versionRows.map(({ userId, userName, tokenId, tokenName, ...v }) => ({
     ...v,
-    author: toAuthor({ userId, userName, tokenName, tokenOwnerId, tokenOwnerName }),
+    author: toAuthor({ userId, userName, tokenId, tokenName }),
   }));
 
   const wanted = version ?? row.guide.currentVersion;

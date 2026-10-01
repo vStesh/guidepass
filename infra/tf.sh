@@ -4,6 +4,9 @@
 #   AWS_PROFILE=<profile> ./tf.sh <instance> plan|apply|output|state …
 #   AWS_PROFILE=<profile> ./tf.sh <instance> bootstrap   # first time: create the state bucket
 #
+# plan and apply build the API and the web app first, so the deploy always
+# matches the checked-out code. GP_SKIP_BUILD=1 skips that (e.g. right after a build).
+#
 # Needs backends/<instance>.s3.tfbackend and <instance>.tfvars next to this script.
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -42,6 +45,12 @@ terraform init -reconfigure -input=false -backend-config="$backend" >/dev/null
 
 command="${1:-plan}"
 shift || true
+
+if [[ "$command" == "plan" || "$command" == "apply" ]] && [[ -z "${GP_SKIP_BUILD:-}" ]]; then
+  echo "Building the API and the web app (GP_SKIP_BUILD=1 to skip)…"
+  (cd .. && npm run build >/dev/null) || { echo "Build failed: run \`npm run build\` in the repository root to see why." >&2; exit 1; }
+fi
+
 case "$command" in
   plan | apply | destroy | import | refresh | console)
     terraform "$command" -var-file="$vars" "$@" ;;

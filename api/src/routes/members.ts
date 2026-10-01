@@ -5,6 +5,7 @@ import { requireMembership, type AppEnv } from "../context.ts";
 import type { Db } from "../db/client.ts";
 import { invitations, memberships, users } from "../db/schema.ts";
 import { ApiError } from "../errors.ts";
+import { revokeTokensOf } from "../services/agentTokens.ts";
 import { validate } from "../validate.ts";
 
 export const memberRoutes = new Hono<AppEnv>();
@@ -54,7 +55,7 @@ memberRoutes.patch(
   },
 );
 
-/** Removes someone from the team. Their runs and results stay. */
+/** Removes someone from the team and revokes their agent tokens. Their runs and results stay. */
 memberRoutes.delete(
   "/members/:userId",
   validate("param", z.object({ userId: z.string().min(1) })),
@@ -67,7 +68,11 @@ memberRoutes.delete(
       .where(and(eq(memberships.teamId, teamId), eq(memberships.userId, userId)));
     if (!member) throw new ApiError("not_found", "Member not found.");
     if (member.role === "owner") await assertAnotherOwner(c.var.db, teamId, userId);
-    await c.var.db.delete(memberships).where(and(eq(memberships.teamId, teamId), eq(memberships.userId, userId)));
+    await c.var.db.transaction(async (tx) => {
+      await tx.delete(memberships).where(and(eq(memberships.teamId, teamId), eq(memberships.userId, userId)));
+      // Their agents lose access too.
+      await revokeTokensOf(tx as Db, teamId, userId);
+    });
     return c.json({ removed: userId });
   },
 );

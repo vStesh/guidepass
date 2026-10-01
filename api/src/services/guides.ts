@@ -4,7 +4,8 @@ import type { Db } from "../db/client.ts";
 import { apps, areas, environments, guideVersions, guides, results, runs } from "../db/schema.ts";
 import { ApiError, isUniqueViolation } from "../errors.ts";
 
-export type Author = { userId: string } | { tokenId: string };
+/** Who uploads: always a person; `tokenId` when their agent does it through MCP. */
+export type Author = { userId: string; tokenId?: string };
 
 export interface UploadGuideInput {
   teamId: string;
@@ -141,10 +142,9 @@ async function upload(db: Db, input: UploadGuideInput): Promise<UploadGuideResul
   const version = existing ? existing.currentVersion + 1 : 1;
   if (input.dryRun) throw new DryRun({ guideId: existing?.id ?? null, version, dryRun: true, diff });
 
-  const author =
-    "userId" in input.author
-      ? { createdByUserId: input.author.userId }
-      : { createdByTokenId: input.author.tokenId };
+  // The token's holder is recorded at upload, so handing the token over later
+  // doesn't rewrite who uploaded what.
+  const author = { createdByUserId: input.author.userId, createdByTokenId: input.author.tokenId ?? null };
   const fields = {
     title: content.title,
     type: content.type ?? null,

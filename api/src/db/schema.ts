@@ -79,6 +79,8 @@ export const agentTokens = pgTable("agent_tokens", {
   scope: text("scope").$type<TokenScope>().notNull(),
   tokenHash: text("token_hash").notNull().unique(),
   createdBy: text("created_by").notNull().references(() => users.id),
+  /** The member the agent acts for: uploads through this token are shown as theirs. */
+  userId: text("user_id").notNull().references(() => users.id),
   createdAt: createdAt(),
   lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
   revokedAt: timestamp("revoked_at", { withTimezone: true }),
