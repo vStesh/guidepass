@@ -6,7 +6,13 @@ Terraform for a self-hosted Guidepass deployment on AWS: Cognito (new pool or an
 
 Requirements: Node.js 22+, Terraform 1.9+, AWS credentials for the target account.
 
-The credentials need the permissions in [`deploy-policy.json`](deploy-policy.json): everything Terraform creates, with IAM roles, Lambda functions, log groups and S3 buckets limited to names starting with `gp-` (keep `name_prefix` starting with `gp-`). A dedicated IAM user with only this policy is a good fit.
+The credentials need the permissions in [`deploy-policy.json`](deploy-policy.json): everything Terraform creates, with IAM roles, Lambda functions, log groups and S3 buckets limited to names starting with `gp-` (keep `name_prefix` starting with `gp-`).
+
+> **Treat these credentials as administrator credentials.** The policy lets them create IAM roles with inline policies, manage any RDS cluster, Cognito user pool, CloudFront distribution, certificate and Route 53 record in the account. Name prefixes keep Guidepass's own resources apart; they don't stop someone holding the keys from reaching the rest of the account.
+>
+> - Best: deploy Guidepass into **its own AWS account** (for example a member account in AWS Organizations) and delegate a subdomain to it.
+> - In a shared account: keep the keys only on the machine that deploys, never in CI or chats; use short-lived credentials (IAM Identity Center or `aws sts assume-role`) rather than long-lived access keys; rotate them, and remove them when you're done.
+> - A tighter policy with a permissions boundary for the Lambda role is planned.
 
 ```bash
 # 1. Install dependencies. tf.sh builds the Lambda bundles (api/dist) and the
@@ -15,15 +21,15 @@ npm ci
 
 # 2. Per instance, two small files next to this README (both ignored by git):
 cd infra
-cp terraform.tfvars.example schoolplus.tfvars                                   # the instance's settings
-cp backends/example.s3.tfbackend.example backends/schoolplus.s3.tfbackend       # where its state lives
+cp terraform.tfvars.example acme.tfvars                                   # the instance's settings
+cp backends/example.s3.tfbackend.example backends/acme.s3.tfbackend       # where its state lives
 
 # 3. First time in an AWS account: create the private, versioned state bucket
-AWS_PROFILE=<profile> ./tf.sh schoolplus bootstrap
+AWS_PROFILE=<profile> ./tf.sh acme bootstrap
 
 # 4. Review, then apply
-AWS_PROFILE=<profile> ./tf.sh schoolplus plan
-AWS_PROFILE=<profile> ./tf.sh schoolplus apply
+AWS_PROFILE=<profile> ./tf.sh acme plan
+AWS_PROFILE=<profile> ./tf.sh acme apply
 ```
 
 `apply` also runs the migration Lambda, so the database schema is always in step with the code. Re-run steps 1 and 3 to deploy a new version.
@@ -49,7 +55,7 @@ One deployment per project, in the project's own AWS account. Full list with def
 
 | Variable | Meaning |
 | --- | --- |
-| `name_prefix` | Prefix for every resource name, e.g. `gp-schoolplus`; lets several instances share an account |
+| `name_prefix` | Prefix for every resource name, e.g. `gp-acme`; lets several instances share an account |
 | `domain_name` | Full domain of the instance, e.g. `gp.example.com`; leave empty to use the CloudFront domain |
 | `hosted_zone_id` | Existing Route 53 zone in this account to add records to; leave empty to create a zone for `domain_name` and delegate it (its name servers are an output) |
 | `owner_email` | The only person allowed to set up the instance on first sign-in; everyone else joins by invitation |
@@ -62,9 +68,9 @@ One deployment per project, in the project's own AWS account. Full list with def
 1. **Parent zone in the same account** — set `hosted_zone_id`; Terraform adds the certificate validation and alias records.
 2. **Parent zone in another account** (for example, the domain lives in the production account and Guidepass in the development account) — leave `hosted_zone_id` empty. Create the zone first, delegate it, then apply the rest:
    ```bash
-   ./tf.sh svitlofour apply -target=aws_route53_zone.this
-   ./tf.sh svitlofour output delegate_name_servers   # add these as an NS record for domain_name in the parent zone
-   ./tf.sh svitlofour apply
+   ./tf.sh acme apply -target=aws_route53_zone.this
+   ./tf.sh acme output delegate_name_servers   # add these as an NS record for domain_name in the parent zone
+   ./tf.sh acme apply
    ```
    Certificate validation waits (up to two hours) until the delegation is visible.
 3. **No custom domain** — leave `domain_name` empty; the instance is reachable at the AWS default domains, and a domain can be added later.

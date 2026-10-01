@@ -1,53 +1,53 @@
 {
   "schemaVersion": 1,
-  "title": "Build 179 — Відповіді на коментарі (B02)",
+  "title": "Build 179 — Replies to comments",
   "type": "feature",
   "build": "179",
   "pr": "#112",
-  "meta": "бекенд на dev: міграція 77, app_v2_get_comments 2.0.5, app_v2_post_comment 2.0.7",
+  "meta": "backend on dev: migration 77, get-comments 2.0.5, post-comment 2.0.7",
   "environments": ["dev", "stg"],
-  "context": "Коментарі під ревʼю й репортом тепер **гілками, один рівень вкладеності**.",
+  "context": "Comments under a post are now **threads, one level deep**.",
   "changelog": [
     {
-      "section": "Додано",
+      "section": "Added",
       "items": [
-        "«Відповісти» + плашка адресата; «↳ Імʼя», коли відповідають не автору кореня.",
-        "Заглушка «Коментар видалено» для кореня з відповідями."
+        "“Reply” with a banner naming who you reply to; “↳ Name” when replying to someone other than the thread's author.",
+        "A “Comment deleted” placeholder for a first comment that has replies."
       ]
     }
   ],
   "prerequisites": [
-    "Build **179** або новіший, iOS і Android; бекенд dev.",
-    "**Два акаунти** (A і B) на двох пристроях."
+    "Build **179** or newer, iOS and Android; dev backend.",
+    "**Two accounts** (A and B) on two devices."
   ],
   "scenarios": [
     {
       "key": "reply-to-comment",
-      "title": "Відповідь на коментар",
+      "title": "Reply to a comment",
       "important": true,
-      "steps": ["A пише коментар під ревʼю.", "B тапає «Відповісти» під ним, пише, надсилає."],
-      "expected": "Відповідь під коментарем A з відступом і лінією гілки, плашка зникла."
+      "steps": ["A writes a comment under a post.", "B taps “Reply” under it, writes a reply and sends it."],
+      "expected": "The reply appears under A's comment, indented with a thread line; the banner disappears."
     },
     {
       "key": "android-keyboard",
-      "title": "Android: плашка й клавіатура",
+      "title": "Android: banner and keyboard",
       "platforms": ["android"],
-      "steps": ["Відкрити поле відповіді на Android."],
-      "expected": "Плашка й клавіатура не перекривають поле."
+      "steps": ["Open the reply field on Android."],
+      "expected": "Neither the banner nor the keyboard covers the field."
     },
     {
       "key": "pull-to-retry",
-      "title": "Повтор через pull-to-refresh",
-      "steps": ["Потягнути список униз після невдалої публікації."],
-      "expected": "Невдале повідомлення надсилається повторно.",
-      "deprecated": { "reason": "Змінено в build 172: зʼявилась кнопка «Повторити»." }
+      "title": "Retry with pull-to-refresh",
+      "steps": ["Pull the list down after a failed send."],
+      "expected": "The failed message is sent again.",
+      "deprecated": { "reason": "Changed in build 172: a “Retry” button was added." }
     },
     {
       "key": "old-backend-flat-list",
-      "title": "Старий бекенд — плоский список",
+      "title": "Older backend — flat list",
       "environments": ["stg"],
-      "steps": ["Відкрити коментарі на stg до деплою нових лямбд."],
-      "expected": "Звичайний плоский список без гілок, нічого не ламається."
+      "steps": ["Open comments on stg before the new backend is deployed."],
+      "expected": "A regular flat list without threads; nothing breaks."
     }
   ],
   "related": [{ "label": "PR #112", "url": null }]

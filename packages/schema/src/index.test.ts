@@ -135,7 +135,7 @@ describe("proof", () => {
     expect(looksLikeSecret('{"access_token": "abcdefghijklmnop123"}')).toBe(true);
     expect(looksLikeSecret("https://bucket.s3.amazonaws.com/a.png?X-Amz-Signature=abcdef0123456789abcdef")).toBe(true);
     expect(looksLikeSecret("GET /reports/42 → 403 {\"error\":\"forbidden\"}, Authorization: Bearer <redacted>")).toBe(false);
-    expect(looksLikeSecret("svt_lambda_gp_reports_filtering_development_v2")).toBe(false);
+    expect(looksLikeSecret("my_lambda_gp_reports_filtering_development_v2")).toBe(false);
   });
 
   it("accepts evidence and automated in guides", () => {

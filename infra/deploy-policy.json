@@ -4,7 +4,9 @@
     {
       "Sid": "Identity",
       "Effect": "Allow",
-      "Action": ["sts:GetCallerIdentity"],
+      "Action": [
+        "sts:GetCallerIdentity"
+      ],
       "Resource": "*"
     },
     {
@@ -29,15 +31,23 @@
     {
       "Sid": "Database",
       "Effect": "Allow",
-      "Action": ["rds:*"],
+      "Action": [
+        "rds:*"
+      ],
       "Resource": "*"
     },
     {
       "Sid": "RdsServiceLinkedRole",
       "Effect": "Allow",
-      "Action": ["iam:CreateServiceLinkedRole"],
+      "Action": [
+        "iam:CreateServiceLinkedRole"
+      ],
       "Resource": "arn:aws:iam::*:role/aws-service-role/rds.amazonaws.com/AWSServiceRoleForRDS",
-      "Condition": { "StringLike": { "iam:AWSServiceName": "rds.amazonaws.com" } }
+      "Condition": {
+        "StringLike": {
+          "iam:AWSServiceName": "rds.amazonaws.com"
+        }
+      }
     },
     {
       "Sid": "DatabaseSecret",
@@ -57,8 +67,24 @@
     {
       "Sid": "DefaultKeys",
       "Effect": "Allow",
-      "Action": ["kms:DescribeKey", "kms:CreateGrant", "kms:ListAliases"],
+      "Action": [
+        "kms:DescribeKey",
+        "kms:ListAliases"
+      ],
       "Resource": "*"
+    },
+    {
+      "Sid": "DefaultKeysForAws",
+      "Effect": "Allow",
+      "Action": [
+        "kms:CreateGrant"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "Bool": {
+          "kms:GrantIsForAWSResource": "true"
+        }
+      }
     },
     {
       "Sid": "LambdaRole",
@@ -69,11 +95,9 @@
         "iam:GetRole",
         "iam:TagRole",
         "iam:UntagRole",
-        "iam:PassRole",
         "iam:PutRolePolicy",
         "iam:GetRolePolicy",
         "iam:DeleteRolePolicy",
-        "iam:AttachRolePolicy",
         "iam:DetachRolePolicy",
         "iam:ListRolePolicies",
         "iam:ListAttachedRolePolicies",
@@ -82,9 +106,37 @@
       "Resource": "arn:aws:iam::*:role/gp-*"
     },
     {
+      "Sid": "LambdaRolePass",
+      "Effect": "Allow",
+      "Action": [
+        "iam:PassRole"
+      ],
+      "Resource": "arn:aws:iam::*:role/gp-*",
+      "Condition": {
+        "StringEquals": {
+          "iam:PassedToService": "lambda.amazonaws.com"
+        }
+      }
+    },
+    {
+      "Sid": "LambdaRoleLogsOnly",
+      "Effect": "Allow",
+      "Action": [
+        "iam:AttachRolePolicy"
+      ],
+      "Resource": "arn:aws:iam::*:role/gp-*",
+      "Condition": {
+        "ArnEquals": {
+          "iam:PolicyARN": "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+        }
+      }
+    },
+    {
       "Sid": "Functions",
       "Effect": "Allow",
-      "Action": ["lambda:*"],
+      "Action": [
+        "lambda:*"
+      ],
       "Resource": "arn:aws:lambda:*:*:function:gp-*"
     },
     {
@@ -106,31 +158,44 @@
     {
       "Sid": "LogsDescribe",
       "Effect": "Allow",
-      "Action": ["logs:DescribeLogGroups"],
+      "Action": [
+        "logs:DescribeLogGroups"
+      ],
       "Resource": "*"
     },
     {
       "Sid": "Api",
       "Effect": "Allow",
-      "Action": ["apigateway:*"],
+      "Action": [
+        "apigateway:*"
+      ],
       "Resource": "arn:aws:apigateway:*::/*"
     },
     {
       "Sid": "WebBucket",
       "Effect": "Allow",
-      "Action": ["s3:*"],
-      "Resource": ["arn:aws:s3:::gp-*", "arn:aws:s3:::gp-*/*"]
+      "Action": [
+        "s3:*"
+      ],
+      "Resource": [
+        "arn:aws:s3:::gp-*",
+        "arn:aws:s3:::gp-*/*"
+      ]
     },
     {
       "Sid": "Cdn",
       "Effect": "Allow",
-      "Action": ["cloudfront:*"],
+      "Action": [
+        "cloudfront:*"
+      ],
       "Resource": "*"
     },
     {
       "Sid": "Certificates",
       "Effect": "Allow",
-      "Action": ["acm:*"],
+      "Action": [
+        "acm:*"
+      ],
       "Resource": "*"
     },
     {
@@ -151,7 +216,9 @@
     {
       "Sid": "UserPools",
       "Effect": "Allow",
-      "Action": ["cognito-idp:*"],
+      "Action": [
+        "cognito-idp:*"
+      ],
       "Resource": "*"
     }
   ]

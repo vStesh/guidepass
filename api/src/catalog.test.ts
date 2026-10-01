@@ -26,7 +26,7 @@ beforeEach(async () => {
   db = await createTestDb();
   await seedEnvironments(db, defaultEnvironments);
   app = createApp({ db, authenticate: localAuthenticator, directory: localDirectory });
-  await call("POST", "/setup", { teamName: "Svitlofour" });
+  await call("POST", "/setup", { teamName: "Acme" });
   const team = (await call("GET", "/me")).body.team;
   await call("GET", "/me", undefined, tester);
   await db.insert(memberships).values({ teamId: team.id, userId: `local:${tester}`, role: "tester" });
@@ -34,13 +34,13 @@ beforeEach(async () => {
 
 describe("platforms", () => {
   it("takes built-in platforms including api, and named custom ones", async () => {
-    const missingName = await call("POST", "/apps", { slug: "svt", name: "Svitlofour", platforms: ["ios", "api", "admin"] });
+    const missingName = await call("POST", "/apps", { slug: "svt", name: "Acme", platforms: ["ios", "api", "admin"] });
     expect(missingName.status).toBe(422);
     expect(missingName.body.error.details).toEqual({ platforms: ["admin"] });
 
     const created = await call("POST", "/apps", {
       slug: "svt",
-      name: "Svitlofour",
+      name: "Acme",
       platforms: ["ios", "api", "admin"],
       platformNames: { admin: "Admin panel" },
     });
@@ -149,19 +149,19 @@ describe("environments", () => {
 
 describe("guides across apps", () => {
   it("lists every app's guides with filters, search and paging", async () => {
-    const a = (await call("POST", "/apps", { slug: "svt", name: "Svitlofour", platforms: ["ios", "android"] })).body.app.id;
+    const a = (await call("POST", "/apps", { slug: "svt", name: "Acme", platforms: ["ios", "android"] })).body.app.id;
     const b = (await call("POST", "/apps", { slug: "web", name: "Web map", platforms: ["ios", "android"] })).body.app.id;
     await call("POST", `/apps/${a}/guides`, { slug: "build-179", content: example });
     await call("POST", `/apps/${b}/guides`, { slug: "build-180", content: { ...example, title: "Build 180 — 100% fix_it", type: "bugfix" } });
 
     const all = (await call("GET", "/guides")).body.guides;
     expect(all.map((g: { slug: string; appName: string }) => `${g.appName}/${g.slug}`).sort()).toEqual([
-      "Svitlofour/build-179",
+      "Acme/build-179",
       "Web map/build-180",
     ]);
     expect((await call("GET", `/guides?appId=${b}`)).body.guides).toHaveLength(1);
     expect((await call("GET", "/guides?type=bugfix")).body.guides[0].slug).toBe("build-180");
-    expect((await call("GET", "/guides?q=коментарі")).body.guides[0].slug).toBe("build-179");
+    expect((await call("GET", "/guides?q=comments")).body.guides[0].slug).toBe("build-179");
     // % and _ are matched literally, not as wildcards.
     expect((await call("GET", "/guides?q=100%25")).body.guides.map((g: { slug: string }) => g.slug)).toEqual(["build-180"]);
     expect((await call("GET", "/guides?q=x_y")).body.guides).toHaveLength(0);
@@ -175,7 +175,7 @@ describe("guides across apps", () => {
 
   it("shows who uploaded each version", async () => {
     await call("PATCH", "/me", { name: "Volodymyr" });
-    const appId = (await call("POST", "/apps", { slug: "svt", name: "Svitlofour", platforms: ["ios", "android"] })).body.app.id;
+    const appId = (await call("POST", "/apps", { slug: "svt", name: "Acme", platforms: ["ios", "android"] })).body.app.id;
     const guideId = (await call("POST", `/apps/${appId}/guides`, { slug: "build-179", content: example })).body.guideId;
 
     const author = { kind: "user", userId: `local:${owner}`, name: "Volodymyr" };

@@ -44,13 +44,13 @@ beforeEach(async () => {
   await seedEnvironments(db, defaultEnvironments);
   app = createApp({ db, authenticate: localAuthenticator, directory: localDirectory });
 
-  await call("POST", "/setup", owner, { teamName: "Svitlofour" });
+  await call("POST", "/setup", owner, { teamName: "Acme" });
   const team = (await call("GET", "/me", owner)).body.team;
   for (const tester of [anna, bohdan]) {
     await call("GET", "/me", tester);
     await db.insert(memberships).values({ teamId: team.id, userId: `local:${tester}`, role: "tester" });
   }
-  appId = (await call("POST", "/apps", owner, { slug: "svitlofour-v2", name: "Svitlofour", platforms: ["ios", "android"] }))
+  appId = (await call("POST", "/apps", owner, { slug: "acme-mobile", name: "Acme", platforms: ["ios", "android"] }))
     .body.app.id;
   guideId = (await call("POST", `/apps/${appId}/guides`, owner, { slug: "build-179", content: example })).body.guideId;
 });
@@ -234,9 +234,9 @@ describe("build, account and proof", () => {
     const ok = await put({
       status: "fail",
       evidence: "POST /comments → 500, request id 42",
-      issueUrl: "https://github.com/svitlofour/app/issues/215",
+      issueUrl: "https://github.com/acme/app/issues/215",
     });
-    expect(ok.body.result).toMatchObject({ status: "fail", issueUrl: "https://github.com/svitlofour/app/issues/215" });
+    expect(ok.body.result).toMatchObject({ status: "fail", issueUrl: "https://github.com/acme/app/issues/215" });
     // The saved proof still counts when only the status changes.
     expect((await put({ status: "fail" })).status).toBe(200);
     expect((await put({ status: "fail", evidence: "" })).status).toBe(422);

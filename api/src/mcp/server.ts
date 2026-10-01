@@ -9,6 +9,7 @@ import type { Db } from "../db/client.ts";
 import { environments } from "../db/schema.ts";
 import { ApiError } from "../errors.ts";
 import { authenticateAgent, type AgentIdentity } from "../services/agentTokens.ts";
+import { MAX_BODY } from "../limits.ts";
 import { createArea, getGuideDetail, listAppsWithAreas, listGuides, setGuideStatus } from "../services/catalog.ts";
 import { uploadGuide } from "../services/guides.ts";
 import { announceGuideUpload, slackNotifier, type Notifier } from "../services/notifications.ts";
@@ -273,9 +274,13 @@ export function createMcpHandler(deps: McpDeps) {
     if (request.method !== "POST") {
       return new Response(null, { status: 405, headers: { allow: "POST" } });
     }
+    const body = await request.text();
+    if (body.length > MAX_BODY) {
+      return Response.json({ error: { code: "invalid", message: "Request is too large." } }, { status: 413 });
+    }
     const server = buildServer(deps, agent);
     const transport = new WebStandardStreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true });
     await server.connect(transport);
-    return transport.handleRequest(request);
+    return transport.handleRequest(new Request(request.url, { method: "POST", headers: request.headers, body }));
   };
 }

@@ -38,7 +38,7 @@ export const en = {
   "apps.new": "New app",
   "apps.name": "Name",
   "apps.slug": "Short id",
-  "apps.slugHint": "Lowercase letters, numbers and dashes, e.g. svitlofour-v2",
+  "apps.slugHint": "Lowercase letters, numbers and dashes, e.g. acme-mobile",
   "apps.platforms": "Platforms",
 
   "platform.ios": "iOS",
@@ -173,7 +173,7 @@ export const en = {
   "tokens.title": "AI agent tokens",
   "tokens.hint": "Agents such as Claude use a token to reach this instance through MCP: read guides and results, and (with write access) upload guides. Agents never mark results and can't delete anything.",
   "tokens.name": "Name",
-  "tokens.namePlaceholder": "e.g. Claude on Mac14",
+  "tokens.namePlaceholder": "e.g. Claude on my laptop",
   "tokens.scope.read": "Read",
   "tokens.scope.write": "Read and write",
   "tokens.holder": "Whose agent",

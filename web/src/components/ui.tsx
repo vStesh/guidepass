@@ -7,14 +7,31 @@ import { en, type MessageKey } from "../i18n/en.ts";
 import type { Loaded } from "../session.tsx";
 import type { VersionAuthor } from "../api.ts";
 
-/**
- * Guide text is written by AI agents and people, so it is sanitized before it
- * reaches the page.
- */
+// Guide text and proof are written by AI agents and people, so they are untrusted:
+// only text formatting and web links survive. No forms (a fake sign-in form on a
+// trusted page), no styles (overlays), no images (a remote image tracks readers).
+const markdownConfig = {
+  ALLOWED_TAGS: [
+    "a", "b", "blockquote", "br", "code", "del", "em", "h1", "h2", "h3", "h4", "h5", "h6", "hr", "i", "li",
+    "ol", "p", "pre", "s", "strong", "sub", "sup", "table", "tbody", "td", "th", "thead", "tr", "ul",
+  ],
+  ALLOWED_ATTR: ["href", "title"],
+  ALLOWED_URI_REGEXP: /^(?:https?:|mailto:|#)/i,
+};
+
+// Outside a browser (unit tests) DOMPurify has no DOM to work with and no hooks.
+DOMPurify.addHook?.("afterSanitizeAttributes", (node) => {
+  if (node.tagName === "A" && node.getAttribute("href")) {
+    node.setAttribute("target", "_blank");
+    node.setAttribute("rel", "noopener noreferrer");
+  }
+});
+
+/** Renders untrusted Markdown as sanitized HTML. */
 export function Markdown({ text, inline = false }: { text: string; inline?: boolean }) {
   const html = useMemo(() => {
     const raw = inline ? marked.parseInline(text, { async: false }) : marked.parse(text, { async: false });
-    return DOMPurify.sanitize(raw);
+    return DOMPurify.sanitize(raw, markdownConfig);
   }, [text, inline]);
   const Tag = inline ? "span" : "div";
   return <Tag className={inline ? undefined : "markdown"} dangerouslySetInnerHTML={{ __html: html }} />;
@@ -101,7 +118,7 @@ export const slugify = (text: string, max = 80) =>
     .slice(0, max)
     .replace(/-+$/, "");
 
-/** "Anna", or "Anna via agent “Claude Mac14”" for uploads through MCP. */
+/** "Anna", or "Anna via agent “Claude on my laptop”" for uploads through MCP. */
 export function authorLabel(t: Translate, author: VersionAuthor | undefined): string {
   if (!author) return t("guide.authorUnknown");
   return author.kind === "agent" ? t("guide.viaAgent", { name: author.name, agent: author.agent }) : author.name;

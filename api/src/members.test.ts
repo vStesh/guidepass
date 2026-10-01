@@ -29,7 +29,7 @@ beforeEach(async () => {
   await seedEnvironments(db, defaultEnvironments);
   directoryAnswer = "exists";
   app = createApp({ db, authenticate: localAuthenticator, directory });
-  await call("POST", "/setup", owner, { teamName: "Svitlofour" });
+  await call("POST", "/setup", owner, { teamName: "Acme" });
 });
 
 describe("invitations", () => {
@@ -39,7 +39,7 @@ describe("invitations", () => {
     expect(invited.body).toMatchObject({ invitation: { email: anna, role: "tester" }, accountCreated: false });
 
     const me = await call("GET", "/me", anna);
-    expect(me.body.team).toMatchObject({ name: "Svitlofour", role: "tester" });
+    expect(me.body.team).toMatchObject({ name: "Acme", role: "tester" });
     expect((await call("GET", "/invitations", owner)).body.invitations).toHaveLength(0);
     expect((await call("GET", "/members", owner)).body.members.map((m: { email: string }) => m.email)).toEqual([
       anna,

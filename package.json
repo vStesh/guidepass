@@ -1,6 +1,16 @@
 {
   "name": "guidepass",
   "private": true,
+  "description": "Manual testing guides written by AI agents, run by people on their devices, read back through MCP.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vStesh/guidepass.git"
+  },
+  "homepage": "https://github.com/vStesh/guidepass#readme",
+  "bugs": {
+    "url": "https://github.com/vStesh/guidepass/issues"
+  },
   "type": "module",
   "workspaces": [
     "packages/*",

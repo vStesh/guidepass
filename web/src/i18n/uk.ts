@@ -39,7 +39,7 @@ export const uk: Messages = {
   "apps.new": "Новий застосунок",
   "apps.name": "Назва",
   "apps.slug": "Короткий id",
-  "apps.slugHint": "Малі латинські літери, цифри й дефіси, напр. svitlofour-v2",
+  "apps.slugHint": "Малі латинські літери, цифри й дефіси, напр. acme-mobile",
   "apps.platforms": "Платформи",
 
   "platform.ios": "iOS",
@@ -174,7 +174,7 @@ export const uk: Messages = {
   "tokens.title": "Токени ШІ-агентів",
   "tokens.hint": "Агенти на кшталт Claude заходять у цей інстанс через MCP за токеном: читають гайди й результати, а з правом запису — завантажують гайди. Агенти ніколи не ставлять результатів і нічого не можуть видалити.",
   "tokens.name": "Назва",
-  "tokens.namePlaceholder": "напр. Claude на Mac14",
+  "tokens.namePlaceholder": "напр. Claude на ноутбуці",
   "tokens.scope.read": "Читання",
   "tokens.scope.write": "Читання й запис",
   "tokens.holder": "Чий агент",

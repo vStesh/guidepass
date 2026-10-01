@@ -55,8 +55,8 @@ beforeEach(async () => {
   await seedEnvironments(db, defaultEnvironments);
   api = createApp({ db, authenticate: localAuthenticator, directory: localDirectory });
   mcp = createMcpHandler({ db, guideLanguage: "uk", publicUrl: "https://gp.example.com" });
-  await call("POST", "/setup", { teamName: "Svitlofour" });
-  appId = (await call("POST", "/apps", { slug: "svitlofour-v2", name: "Svitlofour", platforms: ["ios", "android"] })).body.app.id;
+  await call("POST", "/setup", { teamName: "Acme" });
+  appId = (await call("POST", "/apps", { slug: "acme-mobile", name: "Acme", platforms: ["ios", "android"] })).body.app.id;
 });
 
 afterEach(async () => {
@@ -65,7 +65,7 @@ afterEach(async () => {
 
 describe("agent tokens", () => {
   it("are shown once, listed without the secret, and revocable", async () => {
-    const created = await call("POST", "/agent-tokens", { name: "Claude on Mac14", scope: "write" });
+    const created = await call("POST", "/agent-tokens", { name: "Claude on my laptop", scope: "write" });
     expect(created.status).toBe(201);
     expect(created.body.token.token).toMatch(/^gp_/);
     const listed = await call("GET", "/agent-tokens");
@@ -128,6 +128,22 @@ describe("agent tokens", () => {
       body: "{}",
     }));
     expect(after.status).toBe(401);
+  });
+
+  it("turns away malformed tokens and oversized requests", async () => {
+    const fake = await mcp(new Request("http://guidepass.test/mcp", {
+      method: "POST",
+      headers: { authorization: "Bearer gp_short", "content-type": "application/json" },
+      body: "{}",
+    }));
+    expect(fake.status).toBe(401);
+    const real = (await call("POST", "/agent-tokens", { name: "big", scope: "write" })).body.token.token;
+    const big = await mcp(new Request("http://guidepass.test/mcp", {
+      method: "POST",
+      headers: { authorization: `Bearer ${real}`, "content-type": "application/json", accept: "application/json, text/event-stream" },
+      body: JSON.stringify({ padding: "x".repeat(300 * 1024) }),
+    }));
+    expect(big.status).toBe(413);
   });
 
   it("rejects requests without a token", async () => {

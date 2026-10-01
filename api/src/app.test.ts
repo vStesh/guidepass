@@ -26,10 +26,10 @@ const owner = "owner@example.com";
 const tester = "tester@example.com";
 
 async function setUpApp() {
-  await call("POST", "/setup", { as: owner, body: { teamName: "Svitlofour" } });
+  await call("POST", "/setup", { as: owner, body: { teamName: "Acme" } });
   const created = await call("POST", "/apps", {
     as: owner,
-    body: { slug: "svitlofour-v2", name: "Svitlofour", platforms: ["ios", "android"] },
+    body: { slug: "acme-mobile", name: "Acme", platforms: ["ios", "android"] },
   });
   return created.body.app.id as string;
 }
@@ -204,3 +204,15 @@ describe("guides", () => {
     expect((await list("?status=all")).body.guides).toHaveLength(1);
   });
 });
+
+describe("limits", () => {
+  it("refuses request bodies over 256 KB", async () => {
+    const res = await app.request("/setup", {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-local-user": owner },
+      body: JSON.stringify({ teamName: "x".repeat(300 * 1024) }),
+    });
+    expect(res.status).toBe(413);
+  });
+});
+

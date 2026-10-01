@@ -43,8 +43,8 @@ beforeEach(async () => {
     publicUrl: "https://gp.example.com",
     guideLanguage: "uk",
   });
-  await call("POST", "/setup", { teamName: "Svitlofour" });
-  appId = (await call("POST", "/apps", { slug: "svt", name: "Svitlofour", platforms: ["ios", "android"] })).body.app.id;
+  await call("POST", "/setup", { teamName: "Acme" });
+  appId = (await call("POST", "/apps", { slug: "svt", name: "Acme", platforms: ["ios", "android"] })).body.app.id;
 });
 
 describe("Slack settings", () => {

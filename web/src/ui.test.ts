@@ -5,7 +5,7 @@ describe("slugify", () => {
   it("transliterates Ukrainian", () => {
     expect(slugify("Адмінка")).toBe("adminka");
     expect(slugify("Мобільний застосунок")).toBe("mobilnyi-zastosunok");
-    expect(slugify("Svitlofour v2")).toBe("svitlofour-v2");
+    expect(slugify("Acme Mobile v2")).toBe("acme-mobile-v2");
   });
 
   it("respects a maximum length without a trailing dash", () => {
