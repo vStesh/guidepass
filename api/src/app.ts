@@ -1,5 +1,7 @@
 import { sql } from "drizzle-orm";
 import { Hono } from "hono";
+import { bodyLimit } from "hono/body-limit";
+import { MAX_BODY } from "./limits.ts";
 import type { Authenticator } from "./auth.ts";
 import type { AppEnv } from "./context.ts";
 import type { Db } from "./db/client.ts";
@@ -54,6 +56,9 @@ export function createApp({
   });
 
   app.get("/health", (c) => c.json({ ok: true }));
+
+  // Guides are a few kilobytes; much larger content would break reads through the Data API (1 MB per response).
+  app.use("*", bodyLimit({ maxSize: MAX_BODY, onError: (c) => c.json({ error: { code: "invalid", message: "Request is too large." } }, 413) }));
 
   app.use("*", async (c, next) => {
     const identity = await authenticate(c.req.raw);

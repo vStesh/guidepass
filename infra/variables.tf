@@ -5,7 +5,7 @@ variable "region" {
 }
 
 variable "name_prefix" {
-  description = "Prefix for every resource name, e.g. gp-schoolplus. Lets several instances share one account."
+  description = "Prefix for every resource name, e.g. gp-acme. Lets several instances share one account."
   type        = string
 
   validation {

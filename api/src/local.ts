@@ -29,5 +29,6 @@ const app = new Hono()
     }),
   )
   .all("/mcp", (c) => mcp(c.req.raw));
-serve({ fetch: app.fetch, port });
+// Local auth trusts a header, so only this machine may reach it.
+serve({ fetch: app.fetch, port, hostname: "127.0.0.1" });
 console.log(`Guidepass API on http://localhost:${port}/api, MCP on http://localhost:${port}/mcp`);

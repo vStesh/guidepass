@@ -1,6 +1,16 @@
 # Guidepass
 
+[![CI](https://github.com/vStesh/guidepass/actions/workflows/ci.yml/badge.svg)](https://github.com/vStesh/guidepass/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 A small web app for manual testing. An AI agent writes test guides for a build, people run them on their devices and mark each scenario, and the agent reads the results back through MCP to fix bugs and update the guide.
+
+It is built for small teams that ship mobile and web apps with AI coding agents: the agent knows what changed, people know whether it works on a real phone. Guidepass is the place where the two meet.
+
+- **Guides from the agent.** Through the MCP server an agent (Claude Code, or any MCP client) reads the writing instructions, uploads a guide as JSON and gets a diff of what needs retesting. Versions keep results for unchanged scenarios.
+- **Runs on a phone.** A tester picks the environment, platform, device, the build or commit actually installed and the app account they use, then marks each scenario: pass, fail, blocked or skip, with a note, proof and an issue link.
+- **Results for people and agents.** Every tester's result per environment and platform, combined into verdicts (a pass next to a fail is a *conflict*). The agent reads them with `get_results`; Slack gets new guides and runs with problems.
+- **Self-hosted, pay-per-use.** One instance per project in your own AWS account, about $0.60 a month idle (see [costs](#what-it-costs-to-run)).
 
 ## Concepts
 
@@ -10,7 +20,7 @@ A small web app for manual testing. An AI agent writes test guides for a build, 
 - **Environment** — where a build is tested, e.g. `dev`, `stg`, `prod`. The list is set when Guidepass is deployed and can be edited later by an owner: add, rename, reorder, archive. Each environment has a stable `key` and a display name.
 - **Guide** — the test plan for a build, branch or PR: context, changelog, prerequisites, scenarios, and the environments it must be run on. Every upload creates a new **version**; runs stay attached to the version they were made against.
 - **Scenario** — steps plus the expected result. Each scenario has a stable `key`, so results can be compared across guide versions. A scenario can be limited to some platforms or environments.
-- **Run** — one tester × one guide version × one environment × one platform × one device. Each scenario gets a status (`untested`, `pass`, `fail`, `skip`) and an optional note. Several people can run the same guide; results are combined per environment and platform.
+- **Run** — one tester × one guide version × one environment × one platform × one device. The run records the build and/or commit actually tested and the app account used. Each scenario gets a status (`untested`, `pass`, `fail`, `blocked`, `skip`), an optional note, proof and an issue link; a fail always needs proof, and so does a pass on scenarios that ask for it. Several people can run the same guide; results are combined per environment and platform.
 
 ## Languages
 
@@ -53,7 +63,7 @@ Each instance sits next to existing infrastructure without touching it:
 - DNS in one of three ways: records in an existing Route 53 hosted zone in the same account; a new hosted zone for the subdomain, delegated from wherever the parent domain is managed; or no custom domain at first, using the AWS default domains;
 - the initial list of environments (default `dev`, `stg`, `prod`), which an owner can change later in the app.
 
-Setup instructions will follow with the first release.
+Step-by-step deployment, DNS options, Cognito settings and removal: [infra/README.md](infra/README.md). Connecting an AI agent: [docs/connect-agent.md](docs/connect-agent.md).
 
 ## What it costs to run
 
@@ -92,6 +102,10 @@ Keeping costs down:
 
 Why Aurora Serverless v2 and not a regular RDS instance: the smallest RDS for PostgreSQL (`db.t4g.micro`, $0.019 an hour, plus 20 GB of gp3 storage) is about $16.60 a month and never pauses. RDS has no Data API either, so the Lambdas would have to run inside the VPC and need a VPC endpoint for Cognito (about $8.76 a month per availability zone) or a NAT gateway (about $38 a month plus traffic). That makes it about $26–35 a month whether anyone tests or not, against about $14 for a busy month and $0.60 for an idle one on Aurora.
 
+
+## Contributing and security
+
+Issues and pull requests are welcome: see [CONTRIBUTING.md](CONTRIBUTING.md). Please report vulnerabilities privately as described in [SECURITY.md](SECURITY.md), not in public issues.
 
 ## License
 

@@ -112,7 +112,47 @@ locals {
   cache_policy_optimized         = "658327ea-f89d-4fab-a63d-7e88639e58f6" # Managed-CachingOptimized
   cache_policy_disabled          = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad" # Managed-CachingDisabled
   origin_request_all_except_host = "b689b0a8-53d0-40ab-baf2-68738e2966ac" # Managed-AllViewerExceptHostHeader
-  response_headers_security      = "67f7725c-6f97-4210-82d7-5512b31e9d03" # Managed-SecurityHeadersPolicy
+}
+
+# Security headers for every response. The CSP allows only this site's own
+# scripts and styles, and network calls to this site and Cognito; guide text
+# can't load remote images or post forms elsewhere.
+resource "aws_cloudfront_response_headers_policy" "security" {
+  name = "${var.name_prefix}-security"
+
+  security_headers_config {
+    content_security_policy {
+      content_security_policy = join("; ", [
+        "default-src 'self'",
+        "script-src 'self'",
+        "style-src 'self'",
+        "img-src 'self' data:",
+        "font-src 'self'",
+        "connect-src 'self' https://cognito-idp.${var.region}.amazonaws.com",
+        "form-action 'self'",
+        "frame-ancestors 'none'",
+        "base-uri 'none'",
+        "object-src 'none'",
+      ])
+      override = true
+    }
+    strict_transport_security {
+      access_control_max_age_sec = 63072000
+      include_subdomains         = false
+      override                   = true
+    }
+    frame_options {
+      frame_option = "DENY"
+      override     = true
+    }
+    content_type_options {
+      override = true
+    }
+    referrer_policy {
+      referrer_policy = "strict-origin-when-cross-origin"
+      override        = true
+    }
+  }
 }
 
 resource "aws_cloudfront_distribution" "this" {
@@ -148,7 +188,7 @@ resource "aws_cloudfront_distribution" "this" {
     cached_methods             = ["GET", "HEAD"]
     compress                   = true
     cache_policy_id            = local.cache_policy_optimized
-    response_headers_policy_id = local.response_headers_security
+    response_headers_policy_id = aws_cloudfront_response_headers_policy.security.id
 
     function_association {
       event_type   = "viewer-request"
@@ -165,7 +205,7 @@ resource "aws_cloudfront_distribution" "this" {
     compress                   = true
     cache_policy_id            = local.cache_policy_disabled
     origin_request_policy_id   = local.origin_request_all_except_host
-    response_headers_policy_id = local.response_headers_security
+    response_headers_policy_id = aws_cloudfront_response_headers_policy.security.id
   }
 
   ordered_cache_behavior {
@@ -177,7 +217,7 @@ resource "aws_cloudfront_distribution" "this" {
     compress                   = true
     cache_policy_id            = local.cache_policy_disabled
     origin_request_policy_id   = local.origin_request_all_except_host
-    response_headers_policy_id = local.response_headers_security
+    response_headers_policy_id = aws_cloudfront_response_headers_policy.security.id
   }
 
   restrictions {

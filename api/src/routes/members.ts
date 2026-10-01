@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, ne, sql } from "drizzle-orm";
+import { and, asc, desc, eq, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { z } from "zod";
 import { requireMembership, type AppEnv } from "../context.ts";
@@ -23,14 +23,18 @@ memberRoutes.get("/members", async (c) => {
   return c.json({ members: rows });
 });
 
-/** A team keeps at least one owner. */
+/**
+ * A team keeps at least one owner. Called inside the transaction that demotes or
+ * removes someone: the owners' rows stay locked until it commits, so two owners
+ * demoting each other at once can't both succeed.
+ */
 async function assertAnotherOwner(db: Db, teamId: string, userId: string) {
-  const others = await db
+  const owners = await db
     .select({ userId: memberships.userId })
     .from(memberships)
-    .where(and(eq(memberships.teamId, teamId), eq(memberships.role, "owner"), ne(memberships.userId, userId)))
-    .limit(1);
-  if (!others.length) throw new ApiError("conflict", "A team needs at least one owner.");
+    .where(and(eq(memberships.teamId, teamId), eq(memberships.role, "owner")))
+    .for("update");
+  if (!owners.some((o) => o.userId !== userId)) throw new ApiError("conflict", "A team needs at least one owner.");
 }
 
 memberRoutes.patch(
@@ -46,11 +50,13 @@ memberRoutes.patch(
       .from(memberships)
       .where(and(eq(memberships.teamId, teamId), eq(memberships.userId, userId)));
     if (!member) throw new ApiError("not_found", "Member not found.");
-    if (member.role === "owner" && newRole !== "owner") await assertAnotherOwner(c.var.db, teamId, userId);
-    await c.var.db
-      .update(memberships)
-      .set({ role: newRole })
-      .where(and(eq(memberships.teamId, teamId), eq(memberships.userId, userId)));
+    await c.var.db.transaction(async (tx) => {
+      if (member.role === "owner" && newRole !== "owner") await assertAnotherOwner(tx as Db, teamId, userId);
+      await tx
+        .update(memberships)
+        .set({ role: newRole })
+        .where(and(eq(memberships.teamId, teamId), eq(memberships.userId, userId)));
+    });
     return c.json({ member: { userId, role: newRole } });
   },
 );
@@ -67,8 +73,8 @@ memberRoutes.delete(
       .from(memberships)
       .where(and(eq(memberships.teamId, teamId), eq(memberships.userId, userId)));
     if (!member) throw new ApiError("not_found", "Member not found.");
-    if (member.role === "owner") await assertAnotherOwner(c.var.db, teamId, userId);
     await c.var.db.transaction(async (tx) => {
+      if (member.role === "owner") await assertAnotherOwner(tx as Db, teamId, userId);
       await tx.delete(memberships).where(and(eq(memberships.teamId, teamId), eq(memberships.userId, userId)));
       // Their agents lose access too.
       await revokeTokensOf(tx as Db, teamId, userId);

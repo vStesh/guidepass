@@ -36,7 +36,9 @@ export interface AgentIdentity {
 
 /** Resolves `Authorization: Bearer gp_…` to a live token whose holder is still in the team, or null. */
 export async function authenticateAgent(db: Db, authorization: string | undefined): Promise<AgentIdentity | null> {
-  const token = authorization?.match(/^Bearer (gp_[A-Za-z0-9_-]+)$/)?.[1];
+  // Exactly the shape createAgentToken makes (32 random bytes in base64url), so
+  // made-up tokens are turned away without waking the database.
+  const token = authorization?.match(/^Bearer (gp_[A-Za-z0-9_-]{43})$/)?.[1];
   if (!token) return null;
   const [row] = await db
     .update(agentTokens)

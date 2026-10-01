@@ -11,9 +11,9 @@ Agent tokens are created on the **Team** page: **writers** create tokens for the
 - **Read** — list apps and guides, read guides and results. Enough for analysis.
 - **Read and write** — also create areas, upload guides and new versions, archive guides.
 
-The token (`gp_…`) is shown once. Owners give it to the person who will use it privately — never in a shared channel. Testers who want an agent ask an owner for a token (or to be made a writer); they can't create one themselves, but they see and can revoke the tokens they hold.
+The token (`gp_…`) is shown once. Owners create it for the person who will use it (*Whose agent*) and give it to them privately — never in a shared channel. Writers create their own. Testers who want an agent ask an owner for a token (or to be made a writer); they can't create one themselves, but they see and can revoke the tokens they hold.
 
-A token belongs to the team, not to a person: it keeps working if the person who created it leaves. Revoke tokens that are no longer needed; the page shows when each was last used.
+A token belongs to one member: guides their agent uploads are shown as theirs, and the token stops working when they leave the team. An owner can hand a token to another member later. Revoke tokens that are no longer needed; the page shows when each was last used.
 
 ## 2. Add Guidepass to Claude Code
 
@@ -23,6 +23,7 @@ claude mcp add --scope user --transport http guidepass https://gp.example.com/mc
 
 - Replace `https://gp.example.com` with your instance's address and `gp_...` with the token. Right after creating a token, the Team page shows this command with both filled in.
 - `--scope user` makes Guidepass available in every folder. Without it, it's only available in the folder where you ran the command.
+- The token ends up in your shell history and in Claude Code's settings file (`~/.claude.json`). On a shared machine, clear it from the history (or start the command with a space, if your shell ignores those) and keep the settings file private.
 
 ## 3. Start a new session and check
 
