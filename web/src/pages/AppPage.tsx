@@ -6,7 +6,7 @@ import { PlatformsEditor, type PlatformsValue } from "../components/PlatformsEdi
 import { SlackSettings } from "../components/SlackSettings.tsx";
 import { Chip, ErrorBox, Load, TypeBadge, formatDate, platformLabel, slugify } from "../components/ui.tsx";
 import { useI18n } from "../i18n/index.tsx";
-import { isOwner, useLoad, useSession } from "../session.tsx";
+import { canWrite, isOwner, useLoad, useSession } from "../session.tsx";
 
 export function AppPage() {
   const { appId = "" } = useParams();
@@ -128,14 +128,14 @@ export function AppPage() {
               }
             </Load>
 
+            {canWrite(me) && <NewAreaForm appId={app.id} onDone={reloadApp} />}
             {isOwner(me) && (
               <>
-                <NewAreaForm appId={app.id} onDone={reloadApp} />
                 <AppPlatforms app={app} onSaved={reloadApp} />
                 <SlackSettings app={app} onSaved={reloadApp} />
-                <UploadGuideForm appId={app.id} areas={app.areas} onUploaded={reloadGuides} />
               </>
             )}
+            {canWrite(me) && <UploadGuideForm appId={app.id} areas={app.areas} onUploaded={reloadGuides} />}
           </>
         );
       }}

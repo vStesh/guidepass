@@ -4,7 +4,7 @@ A small web app for manual testing. An AI agent writes test guides for a build, 
 
 ## Concepts
 
-- **Team** — people with a role: `owner` or `tester`. New members join by email invitation.
+- **Team** — people with a role: `tester` runs guides and marks results; `writer` also uploads and archives guides, adds areas and creates agent tokens for themselves; `owner` also manages apps, environments, members, Slack and everyone's agent tokens. New members join by email invitation.
 - **App** — something the team tests, e.g. a mobile app with iOS and Android builds.
 - **Area** — a feature or module inside an app (MFA, wallet, chat…). Guides are grouped by area.
 - **Environment** — where a build is tested, e.g. `dev`, `stg`, `prod`. The list is set when Guidepass is deployed and can be edited later by an owner: add, rename, reorder, archive. Each environment has a stable `key` and a display name.

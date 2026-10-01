@@ -24,7 +24,7 @@ agent writes guide ──► people run it on devices ──► agent reads resu
 
 ## Authentication
 
-- **Agent tokens**, created by a team owner in the web app and shown once. Stored as a SHA-256 hash in `agent_tokens`. Format `gp_<random>`, so they are easy to spot in logs and secret scanners.
+- **Agent tokens**, created in the web app by an owner (for any member) or a writer (for themselves) and shown once. Stored as a SHA-256 hash in `agent_tokens`. Format `gp_<random>`, so they are easy to spot in logs and secret scanners.
 - Sent as `Authorization: Bearer gp_…`. A token belongs to one team; every tool call is limited to that team's data.
 - **Scopes:** `read` (read tools only) and `write` (read tools plus write tools). A token used only for analysis gets `read`.
 - Owners can revoke a token; `last_used_at` is updated on use.

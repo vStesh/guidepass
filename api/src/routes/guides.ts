@@ -54,7 +54,7 @@ guideRoutes.post(
     }),
   ),
   async (c) => {
-    const { teamId } = await requireMembership(c, "owner");
+    const { teamId } = await requireMembership(c, "writer");
     const body = c.req.valid("json");
     const appId = c.req.valid("param").appId;
     const author = { userId: c.var.user.id };
@@ -89,7 +89,7 @@ guideRoutes.patch(
   guideParam,
   validate("json", z.object({ status: z.enum(["active", "archived"]) })),
   async (c) => {
-    const { teamId } = await requireMembership(c, "owner");
+    const { teamId } = await requireMembership(c, "writer");
     const guide = await setGuideStatus(c.var.db, teamId, c.req.valid("param").guideId, c.req.valid("json").status);
     return c.json({ guide });
   },

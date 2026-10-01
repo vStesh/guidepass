@@ -36,7 +36,15 @@ export const users = pgTable("users", {
   createdAt: createdAt(),
 });
 
-export type Role = "owner" | "tester";
+/**
+ * `owner` runs the team: apps, environments, members, Slack, everyone's agent tokens.
+ * `writer` also maintains guides: uploads them, adds areas, archives, and creates
+ * agent tokens for themselves. `tester` runs guides and marks results.
+ */
+export type Role = "owner" | "writer" | "tester";
+
+/** Higher includes everything below it. */
+export const roleRank: Record<Role, number> = { tester: 0, writer: 1, owner: 2 };
 
 export const memberships = pgTable(
   "memberships",

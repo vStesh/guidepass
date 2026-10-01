@@ -9,9 +9,10 @@ import { createAgentToken } from "../services/agentTokens.ts";
 import { validate } from "../validate.ts";
 
 /**
- * Owners manage the tokens AI agents use to reach the MCP server. Each token is
- * held by one member: what the agent uploads is shown as theirs. Testers can't
- * create tokens, so an owner issues one for them.
+ * Tokens AI agents use to reach the MCP server. Each token is held by one member:
+ * what the agent uploads is shown as theirs. Owners manage everyone's tokens;
+ * writers create tokens for themselves; testers get theirs from an owner. Everyone
+ * sees and can revoke the tokens they hold.
  */
 export const agentTokenRoutes = new Hono<AppEnv>();
 
@@ -28,7 +29,7 @@ async function assertMember(db: Db, teamId: string, userId: string) {
 }
 
 agentTokenRoutes.get("/agent-tokens", async (c) => {
-  const { teamId } = await requireMembership(c, "owner");
+  const { teamId, role } = await requireMembership(c);
   const rows = await c.var.db
     .select({
       id: agentTokens.id,
@@ -41,7 +42,13 @@ agentTokenRoutes.get("/agent-tokens", async (c) => {
     })
     .from(agentTokens)
     .innerJoin(users, eq(users.id, agentTokens.userId))
-    .where(and(eq(agentTokens.teamId, teamId), isNull(agentTokens.revokedAt)))
+    .where(
+      and(
+        eq(agentTokens.teamId, teamId),
+        isNull(agentTokens.revokedAt),
+        role === "owner" ? undefined : eq(agentTokens.userId, c.var.user.id),
+      ),
+    )
     .orderBy(desc(agentTokens.createdAt));
   return c.json({ tokens: rows });
 });
@@ -58,8 +65,11 @@ agentTokenRoutes.post(
     }),
   ),
   async (c) => {
-    const { teamId } = await requireMembership(c, "owner");
+    const { teamId, role } = await requireMembership(c, "writer");
     const { userId = c.var.user.id, ...body } = c.req.valid("json");
+    if (role !== "owner" && userId !== c.var.user.id) {
+      throw new ApiError("forbidden", "Writers create tokens only for themselves.");
+    }
     const token = await c.var.db.transaction(async (tx) => {
       await assertMember(tx as Db, teamId, userId);
       return createAgentToken(tx as Db, { ...body, teamId, createdBy: c.var.user.id, userId });
@@ -106,12 +116,18 @@ agentTokenRoutes.patch(
 );
 
 agentTokenRoutes.delete("/agent-tokens/:tokenId", tokenParam, async (c) => {
-  const { teamId } = await requireMembership(c, "owner");
+  const { teamId, role } = await requireMembership(c);
   const [revoked] = await c.var.db
     .update(agentTokens)
     .set({ revokedAt: new Date() })
     .where(
-      and(eq(agentTokens.id, c.req.valid("param").tokenId), eq(agentTokens.teamId, teamId), isNull(agentTokens.revokedAt)),
+      and(
+        eq(agentTokens.id, c.req.valid("param").tokenId),
+        eq(agentTokens.teamId, teamId),
+        isNull(agentTokens.revokedAt),
+        // Others' tokens look missing, not forbidden: their ids aren't revealed.
+        role === "owner" ? undefined : eq(agentTokens.userId, c.var.user.id),
+      ),
     )
     .returning({ id: agentTokens.id });
   if (!revoked) throw new ApiError("not_found", "Token not found.");

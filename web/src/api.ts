@@ -1,7 +1,7 @@
 import type { GuideContent, GuideType, Platform, ResultStatus, ScenarioDiff, Verdict } from "@guidepass/schema/core";
 import type { Auth } from "./auth.ts";
 
-export type Role = "owner" | "tester";
+export type Role = "owner" | "writer" | "tester";
 export type Locale = "en" | "uk";
 
 export interface User {

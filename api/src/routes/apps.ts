@@ -168,7 +168,7 @@ appRoutes.post(
   appParam,
   validate("json", z.object({ slug, name: z.string().trim().min(1).max(100) })),
   async (c) => {
-    const { teamId } = await requireMembership(c, "owner");
+    const { teamId } = await requireMembership(c, "writer");
     const area = await createArea(c.var.db, teamId, c.req.valid("param").appId, c.req.valid("json"));
     return c.json({ area }, 201);
   },

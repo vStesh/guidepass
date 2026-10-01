@@ -4,7 +4,7 @@ import { AgentTokens } from "../components/AgentTokens.tsx";
 import { ConnectAgentGuide } from "../components/ConnectAgentGuide.tsx";
 import { ErrorBox, Load, formatDate } from "../components/ui.tsx";
 import { useI18n } from "../i18n/index.tsx";
-import { isOwner, useLoad, useSession } from "../session.tsx";
+import { canWrite, isOwner, useLoad, useSession } from "../session.tsx";
 
 export function TeamPage() {
   const { t, locale } = useI18n();
@@ -46,6 +46,7 @@ export function TeamPage() {
                     {owner ? (
                       <select value={m.role} onChange={(e) => void act(() => api.setMemberRole(m.id, e.target.value as Role))()}>
                         <option value="owner">{t("team.role.owner")}</option>
+                        <option value="writer">{t("team.role.writer")}</option>
                         <option value="tester">{t("team.role.tester")}</option>
                       </select>
                     ) : (
@@ -88,9 +89,9 @@ export function TeamPage() {
                 ) : (
                   <p className="muted">{t("team.noPending")}</p>
                 )}
-                <AgentTokens key={members.map((m) => m.id).join()} members={members} />
               </>
             )}
+            <AgentTokens key={members.map((m) => m.id).join()} members={members} />
           </>
         )}
       </Load>
@@ -98,7 +99,7 @@ export function TeamPage() {
         <summary>
           <h2>{t("connect.title")}</h2>
         </summary>
-        <p className="muted">{owner ? t("connect.introOwner") : t("connect.introTester")}</p>
+        <p className="muted">{owner ? t("connect.introOwner") : canWrite(me) ? t("connect.introWriter") : t("connect.introTester")}</p>
         <ConnectAgentGuide />
       </details>
     </>
@@ -133,11 +134,13 @@ function InviteForm({ onInvited }: { onInvited: () => void }) {
     <form className="card stack section-gap" onSubmit={submit}>
       <h2>{t("team.invite")}</h2>
       <p className="muted">{t("team.inviteHint")}</p>
+      <p className="muted small">{t("team.rolesHint")}</p>
       <div className="inline-form">
         <input type="email" required placeholder="name@example.com" value={email} onChange={(e) => setEmail(e.target.value)} aria-label="Email" />
         <input maxLength={100} placeholder={t("team.inviteName")} value={name} onChange={(e) => setName(e.target.value)} aria-label={t("profile.name")} />
         <select value={role} onChange={(e) => setRole(e.target.value as Role)} aria-label={t("team.members")}>
           <option value="tester">{t("team.role.tester")}</option>
+          <option value="writer">{t("team.role.writer")}</option>
           <option value="owner">{t("team.role.owner")}</option>
         </select>
         <button type="submit" className="button button-primary">

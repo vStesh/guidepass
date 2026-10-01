@@ -10,7 +10,7 @@ import { validate } from "../validate.ts";
 
 export const memberRoutes = new Hono<AppEnv>();
 
-const role = z.enum(["owner", "tester"]);
+const role = z.enum(["owner", "writer", "tester"]);
 
 memberRoutes.get("/members", async (c) => {
   const { teamId } = await requireMembership(c);
