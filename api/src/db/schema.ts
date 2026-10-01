@@ -60,6 +60,8 @@ export const invitations = pgTable("invitations", {
   teamId: uuid("team_id").notNull().references(() => teams.id),
   /** Stored lowercased. */
   email: text("email").notNull(),
+  /** Name the owner typed when inviting; becomes the person's name if they have none. */
+  name: text("name"),
   role: text("role").$type<Role>().notNull(),
   status: text("status").$type<InvitationStatus>().notNull().default("pending"),
   invitedBy: text("invited_by").notNull().references(() => users.id),

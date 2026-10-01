@@ -42,3 +42,5 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Data API calls wait for a paused Aurora to resume (up to ~22 s in the API, 2 min in migrations) instead of failing the first request after idle time.
 - Inviting a pending person again resends their temporary password if it was never used, instead of failing.
 - README with core concepts, MIT license.
+- Names and authorship: owners can give a name when inviting (it fills the person's name if they have none), people without a name are asked for one, members are sorted by name. Guide pages show who created and last updated a guide, with a version history (author, date, note); uploads through MCP show as "<person> via agent “<token>”". The home list shows the author of the current version; `get_guide` and `list_guides` return it too.
+- Footer with links to the source code, agent connection guide, guide-writing instructions, documentation and issues, the version and the MIT License.

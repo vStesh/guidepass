@@ -1,8 +1,8 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
 import type { GuideContent, Platform, Scenario } from "@guidepass/schema/core";
-import type { App, Environment, GuideResults } from "../api.ts";
-import { Chip, ErrorBox, Load, Markdown, ProgressBar, TypeBadge, VerdictBadge, formatDate, platformLabel } from "../components/ui.tsx";
+import type { App, Environment, GuideDetail, GuideResults } from "../api.ts";
+import { Chip, ErrorBox, Load, Markdown, ProgressBar, TypeBadge, VerdictBadge, authorLabel, formatDate, platformLabel } from "../components/ui.tsx";
 import { useI18n } from "../i18n/index.tsx";
 import { isOwner, useLoad, useSession } from "../session.tsx";
 
@@ -85,6 +85,7 @@ export function GuidePage() {
                 </button>
               )}
             </div>
+            <VersionHistory versions={detail.versions} shown={detail.version} />
             {content.meta && <p className="muted small">{content.meta}</p>}
             {guide.status === "archived" && <p className="notice">{t("guide.archived")}</p>}
 
@@ -472,5 +473,39 @@ export function ScenarioBody({
         <strong>{t("guide.expected")}:</strong> <Markdown text={scenario.expected} inline />
       </div>
     </>
+  );
+}
+
+/** Who uploaded the shown version, and the full history when there is more than one. */
+function VersionHistory({ versions, shown }: { versions: GuideDetail["versions"]; shown: number }) {
+  const { t, locale } = useI18n();
+  const current = versions.find((v) => v.version === shown);
+  const first = versions[versions.length - 1];
+  if (!current) return null;
+  const line = (v: GuideDetail["versions"][number]) =>
+    t(v.version === 1 ? "guide.createdBy" : "guide.updatedBy", {
+      author: authorLabel(t, v.author),
+      date: formatDate(v.createdAt, locale),
+    });
+  return (
+    <div className="muted small section-gap-sm">
+      <p className="author-line">
+        {line(current)}
+        {current.version > 1 && first && <> · {line(first)}</>}
+      </p>
+      {versions.length > 1 && (
+        <details>
+          <summary>{t("guide.history")}</summary>
+          <ol className="history">
+            {versions.map((v) => (
+              <li key={v.version}>
+                <strong>{t("guide.version", { version: v.version })}</strong> — {line(v)}
+                {v.changeNote && <div>{v.changeNote}</div>}
+              </li>
+            ))}
+          </ol>
+        </details>
+      )}
+    </div>
   );
 }

@@ -5,6 +5,7 @@ import type { GuideType, Verdict } from "@guidepass/schema/core";
 import { errorMessage, useI18n, type Translate } from "../i18n/index.tsx";
 import { en, type MessageKey } from "../i18n/en.ts";
 import type { Loaded } from "../session.tsx";
+import type { VersionAuthor } from "../api.ts";
 
 /**
  * Guide text is written by AI agents and people, so it is sanitized before it
@@ -99,6 +100,12 @@ export const slugify = (text: string, max = 80) =>
     .replace(/^-+|-+$/g, "")
     .slice(0, max)
     .replace(/-+$/, "");
+
+/** "Anna", or "Anna via agent “Claude Mac14”" for uploads through MCP. */
+export function authorLabel(t: Translate, author: VersionAuthor | undefined): string {
+  if (!author) return t("guide.authorUnknown");
+  return author.kind === "agent" ? t("guide.viaAgent", { name: author.name, agent: author.agent }) : author.name;
+}
 
 /** Built-in platforms are translated; an app's own platforms use the name the owner gave them. */
 export function platformLabel(t: Translate, key: string, names?: Record<string, string>): string {
