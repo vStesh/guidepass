@@ -215,7 +215,7 @@ function buildServer({ db, guideLanguage, publicUrl, notifier }: McpDeps, agent:
     (input) =>
       run(async () => {
         requireWrite("upload_guide");
-        const author = { tokenId: agent.tokenId };
+        const author = { userId: agent.userId, tokenId: agent.tokenId };
         const result = await uploadGuide(db, { ...input, teamId, author });
         if (!result.dryRun && result.guideId) {
           await announceGuideUpload(

@@ -94,13 +94,12 @@ async function send(ctx: NotificationContext, app: AppRow | undefined, event: Sl
 
 async function authorName(ctx: NotificationContext, author: Author) {
   const m = messages(ctx.language);
-  if ("userId" in author) {
-    const [user] = await ctx.db.select({ name: users.name, email: users.email }).from(users).where(eq(users.id, author.userId));
-    // The channel may include people outside the team: no full email addresses.
-    return user?.name ?? user?.email.split("@")[0] ?? "?";
-  }
+  const [user] = await ctx.db.select({ name: users.name, email: users.email }).from(users).where(eq(users.id, author.userId));
+  // The channel may include people outside the team: no full email addresses.
+  const person = user?.name ?? user?.email.split("@")[0] ?? "?";
+  if (!author.tokenId) return person;
   const [token] = await ctx.db.select({ name: agentTokens.name }).from(agentTokens).where(eq(agentTokens.id, author.tokenId));
-  return `${m.agent} (${token?.name ?? "?"})`;
+  return `${person} — ${m.agent} (${token?.name ?? "?"})`;
 }
 
 async function environmentNames(ctx: NotificationContext, keys: string[]) {
