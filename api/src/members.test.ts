@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
+import example from "@guidepass/schema/examples/build-179.json" with { type: "json" };
 import { createApp } from "./app.ts";
 import { localAuthenticator } from "./auth.ts";
 import { defaultEnvironments, seedEnvironments, type Db } from "./db/client.ts";
@@ -128,3 +129,53 @@ describe("members", () => {
     expect((await call("DELETE", `/members/local:${anna}`, owner)).status).toBe(404);
   });
 });
+
+describe("writers", () => {
+  const bohdan = "bohdan@example.com";
+  let appId: string;
+
+  beforeEach(async () => {
+    await call("POST", "/invitations", owner, { email: anna, role: "writer" });
+    await call("GET", "/me", anna);
+    await call("POST", "/invitations", owner, { email: bohdan });
+    await call("GET", "/me", bohdan);
+    appId = (await call("POST", "/apps", owner, { slug: "acme-mobile", name: "Acme", platforms: ["ios", "android"] })).body.app.id;
+  });
+
+  it("maintain guides and areas, but not the team or apps", async () => {
+    expect((await call("GET", "/me", anna)).body.team.role).toBe("writer");
+    expect((await call("POST", `/apps/${appId}/areas`, anna, { slug: "comments", name: "Comments" })).status).toBe(201);
+    const uploaded = await call("POST", `/apps/${appId}/guides`, anna, { slug: "build-179", content: example });
+    expect(uploaded.status).toBe(201);
+    expect((await call("PATCH", `/guides/${uploaded.body.guideId}`, anna, { status: "archived" })).status).toBe(200);
+
+    expect((await call("POST", "/apps", anna, { slug: "web", name: "Web", platforms: ["web"] })).status).toBe(403);
+    expect((await call("PATCH", `/apps/${appId}`, anna, { name: "Renamed" })).status).toBe(403);
+    expect((await call("POST", "/invitations", anna, { email: "x@example.com" })).status).toBe(403);
+    expect((await call("POST", "/environments", anna, { key: "qa", name: "QA" })).status).toBe(403);
+    // Testers still only run guides.
+    expect((await call("POST", `/apps/${appId}/guides`, bohdan, { slug: "build-180", content: example })).status).toBe(403);
+  });
+
+  it("create agent tokens only for themselves and see only their own", async () => {
+    const own = await call("POST", "/agent-tokens", anna, { name: "Anna's Claude", scope: "write" });
+    expect(own.status).toBe(201);
+    expect(own.body.token).toMatchObject({ userId: `local:${anna}` });
+    expect((await call("POST", "/agent-tokens", anna, { name: "x", scope: "write", userId: `local:${bohdan}` })).status).toBe(403);
+    expect((await call("POST", "/agent-tokens", bohdan, { name: "x", scope: "read" })).status).toBe(403);
+
+    const ownerToken = (await call("POST", "/agent-tokens", owner, { name: "Owner's", scope: "read" })).body.token;
+    const bohdanToken = (await call("POST", "/agent-tokens", owner, { name: "Bohdan's", scope: "write", userId: `local:${bohdan}` })).body.token;
+
+    const names = async (as: string) => (await call("GET", "/agent-tokens", as)).body.tokens.map((t: { name: string }) => t.name).sort();
+    expect(await names(anna)).toEqual(["Anna's Claude"]);
+    expect(await names(bohdan)).toEqual(["Bohdan's"]);
+    expect(await names(owner)).toEqual(["Anna's Claude", "Bohdan's", "Owner's"]);
+
+    expect((await call("PATCH", `/agent-tokens/${own.body.token.id}`, anna, { userId: `local:${bohdan}` })).status).toBe(403);
+    expect((await call("DELETE", `/agent-tokens/${ownerToken.id}`, anna)).status).toBe(404);
+    expect((await call("DELETE", `/agent-tokens/${bohdanToken.id}`, bohdan)).status).toBe(200);
+    expect((await call("DELETE", `/agent-tokens/${own.body.token.id}`, anna)).status).toBe(200);
+  });
+});
+

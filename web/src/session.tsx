@@ -19,6 +19,8 @@ export function useSession(): Session {
 }
 
 export const isOwner = (me: Me) => me.team?.role === "owner";
+/** Owners and writers maintain guides: upload, add areas, archive, create their own agent tokens. */
+export const canWrite = (me: Me) => me.team?.role === "owner" || me.team?.role === "writer";
 
 export type Loaded<T> =
   | { status: "loading" }

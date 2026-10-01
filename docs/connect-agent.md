@@ -6,12 +6,12 @@ The same steps, in English and Ukrainian, are on the **Team** page of every inst
 
 ## 1. Get a token
 
-A **team owner** creates agent tokens on the **Team** page, under *AI agent tokens*:
+Agent tokens are created on the **Team** page: **writers** create tokens for themselves (*My agent tokens*), **owners** for anyone in the team (*AI agent tokens*). Two kinds:
 
 - **Read** — list apps and guides, read guides and results. Enough for analysis.
 - **Read and write** — also create areas, upload guides and new versions, archive guides.
 
-The token (`gp_…`) is shown once. Owners give it to the person who will use it privately — never in a shared channel. Testers who want an agent ask an owner for a token; they can't create one themselves.
+The token (`gp_…`) is shown once. Owners give it to the person who will use it privately — never in a shared channel. Testers who want an agent ask an owner for a token (or to be made a writer); they can't create one themselves, but they see and can revoke the tokens they hold.
 
 A token belongs to the team, not to a person: it keeps working if the person who created it leaves. Revoke tokens that are no longer needed; the page shows when each was last used.
 

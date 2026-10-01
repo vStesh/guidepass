@@ -51,4 +51,5 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Proof and issue links on results: every fail needs proof, and so does a pass on scenarios marked `evidence: true` (auth, privacy, security). Proof that looks like a token or key is refused. Scenarios can name an `automated` test that also covers them; it is shown apart and never counts as a pass. Migration `0008`.
 - Guide instructions: separate guides per area for the dev build, production checks in their own guide, proof and automated tests, account names testers record.
 - Status buttons on a run sit in two rows on phones.
+- A `writer` role between owner and tester: writers upload and archive guides, add areas and create agent tokens for themselves only, and see only their own tokens; testers see and can revoke the tokens an owner gave them. Owners keep apps, environments, members, Slack and everyone's tokens.
 

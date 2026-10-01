@@ -4,7 +4,7 @@ import type { GuideContent, Platform, Scenario } from "@guidepass/schema/core";
 import type { App, Counts, Environment, GuideDetail, GuideResults } from "../api.ts";
 import { Chip, ErrorBox, Load, Markdown, ProgressBar, TypeBadge, VerdictBadge, authorLabel, formatDate, platformLabel } from "../components/ui.tsx";
 import { useI18n } from "../i18n/index.tsx";
-import { isOwner, useLoad, useSession } from "../session.tsx";
+import { canWrite, useLoad, useSession } from "../session.tsx";
 
 const ACCOUNT_KEY = "guidepass.account";
 const DEVICE_KEY = "guidepass.lastDevice";
@@ -73,7 +73,7 @@ export function GuidePage() {
               ) : (
                 <span className="muted">{t("guide.version", { version: detail.version })}</span>
               )}
-              {isOwner(me) && (
+              {canWrite(me) && (
                 <button
                   type="button"
                   className="button button-small"

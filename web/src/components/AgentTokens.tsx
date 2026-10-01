@@ -1,17 +1,20 @@
 import { useState, type FormEvent } from "react";
 import type { AgentToken, Member } from "../api.ts";
 import { useI18n } from "../i18n/index.tsx";
-import { useLoad, useSession } from "../session.tsx";
+import { canWrite, isOwner, useLoad, useSession } from "../session.tsx";
 import { ConnectAgentGuide } from "./ConnectAgentGuide.tsx";
 import { ErrorBox, Load, formatDate } from "./ui.tsx";
 
 /**
- * Owners create and revoke the tokens AI agents use for MCP. Each token is held
- * by a member, and what its agent uploads is shown as theirs.
+ * Tokens AI agents use for MCP. Each token is held by a member, and what its agent
+ * uploads is shown as theirs. Owners see and manage everyone's tokens; writers
+ * create their own; testers see the ones an owner gave them.
  */
 export function AgentTokens({ members }: { members: Member[] }) {
   const { t, locale } = useI18n();
   const { api, me } = useSession();
+  const owner = isOwner(me);
+  const writer = canWrite(me);
   const [state, reload] = useLoad(() => api.agentTokens(), [api]);
   const [chosenHolder, setHolder] = useState(me.user.id);
   // Falls back to me if the chosen member has just been removed.
@@ -39,8 +42,9 @@ export function AgentTokens({ members }: { members: Member[] }) {
 
   return (
     <section className="card stack section-gap">
-      <h2>{t("tokens.title")}</h2>
+      <h2>{owner ? t("tokens.title") : t("tokens.myTitle")}</h2>
       <p className="muted">{t("tokens.hint")}</p>
+      {!writer && <p className="muted">{t("tokens.testerHint")}</p>}
       {error ? <ErrorBox error={error} /> : null}
       {notice && <p className="notice notice-ok">{notice}</p>}
 
@@ -59,30 +63,32 @@ export function AgentTokens({ members }: { members: Member[] }) {
                 <li key={token.id} className="list-item list-item-static">
                   <span className="list-title">{token.name}</span>
                   <span className="list-meta">
-                    <MemberSelect
-                      members={members}
-                      value={token.userId}
-                      label={t("tokens.holder")}
-                      disabled={moving === token.id}
-                      onChange={async (userId) => {
-                        const to = members.find((m) => m.id === userId);
-                        const includePastUploads = window.confirm(
-                          t("tokens.movePast", { name: token.name, member: to?.name ?? to?.email ?? "" }),
-                        );
-                        setError(null);
-                        setNotice(null);
-                        setMoving(token.id);
-                        try {
-                          const { movedUploads } = await api.setTokenHolder(token.id, userId, includePastUploads);
-                          if (movedUploads) setNotice(t("tokens.moved", { count: movedUploads }));
-                          await reload();
-                        } catch (err) {
-                          setError(err);
-                        } finally {
-                          setMoving(null);
-                        }
-                      }}
-                    />
+                    {owner && (
+                      <MemberSelect
+                        members={members}
+                        value={token.userId}
+                        label={t("tokens.holder")}
+                        disabled={moving === token.id}
+                        onChange={async (userId) => {
+                          const to = members.find((m) => m.id === userId);
+                          const includePastUploads = window.confirm(
+                            t("tokens.movePast", { name: token.name, member: to?.name ?? to?.email ?? "" }),
+                          );
+                          setError(null);
+                          setNotice(null);
+                          setMoving(token.id);
+                          try {
+                            const { movedUploads } = await api.setTokenHolder(token.id, userId, includePastUploads);
+                            if (movedUploads) setNotice(t("tokens.moved", { count: movedUploads }));
+                            await reload();
+                          } catch (err) {
+                            setError(err);
+                          } finally {
+                            setMoving(null);
+                          }
+                        }}
+                      />
+                    )}
                     <span>{t(`tokens.scope.${token.scope}`)}</span>
                     <span>
                       {token.lastUsedAt ? t("tokens.lastUsed", { date: formatDate(token.lastUsedAt, locale) }) : t("tokens.neverUsed")}
@@ -112,18 +118,22 @@ export function AgentTokens({ members }: { members: Member[] }) {
         }
       </Load>
 
-      <p className="muted small">{t("tokens.holderHint")}</p>
-      <form className="inline-form" onSubmit={submit}>
-        <input required maxLength={100} placeholder={t("tokens.namePlaceholder")} aria-label={t("tokens.name")} value={name} onChange={(e) => setName(e.target.value)} />
-        <MemberSelect members={members} value={holder} label={t("tokens.holder")} onChange={setHolder} />
-        <select value={scope} onChange={(e) => setScope(e.target.value as AgentToken["scope"])} aria-label={t("tokens.title")}>
-          <option value="read">{t("tokens.scope.read")}</option>
-          <option value="write">{t("tokens.scope.write")}</option>
-        </select>
-        <button type="submit" className="button button-primary">
-          {t("tokens.create")}
-        </button>
-      </form>
+      {writer && (
+        <>
+          <p className="muted small">{owner ? t("tokens.holderHint") : t("tokens.writerHint")}</p>
+          <form className="inline-form" onSubmit={submit}>
+            <input required maxLength={100} placeholder={t("tokens.namePlaceholder")} aria-label={t("tokens.name")} value={name} onChange={(e) => setName(e.target.value)} />
+            {owner && <MemberSelect members={members} value={holder} label={t("tokens.holder")} onChange={setHolder} />}
+            <select value={scope} onChange={(e) => setScope(e.target.value as AgentToken["scope"])} aria-label={t("tokens.title")}>
+              <option value="read">{t("tokens.scope.read")}</option>
+              <option value="write">{t("tokens.scope.write")}</option>
+            </select>
+            <button type="submit" className="button button-primary">
+              {t("tokens.create")}
+            </button>
+          </form>
+        </>
+      )}
     </section>
   );
 }

@@ -3,7 +3,7 @@ import type { Context } from "hono";
 import type { Db } from "./db/client.ts";
 import type { UserDirectory } from "./directory.ts";
 import type { NotificationContext } from "./services/notifications.ts";
-import { memberships, type Locale, type Role } from "./db/schema.ts";
+import { memberships, roleRank, type Locale, type Role } from "./db/schema.ts";
 import { ApiError } from "./errors.ts";
 import { acceptPendingInvitation } from "./services/invitations.ts";
 
@@ -40,11 +40,12 @@ export async function findMembership(c: Context<AppEnv>): Promise<Membership | u
   return (await find()) ?? ((await acceptPendingInvitation(c.var.db, c.var.user)) ? find() : undefined);
 }
 
+/** The caller's membership, at least `role` if given (owners can do what writers can). */
 export async function requireMembership(c: Context<AppEnv>, role?: Role): Promise<Membership> {
   const membership = await findMembership(c);
   if (!membership) throw new ApiError("forbidden", "You are not a member of a team yet.");
-  if (role === "owner" && membership.role !== "owner") {
-    throw new ApiError("forbidden", "Only team owners can do this.");
+  if (role && roleRank[membership.role] < roleRank[role]) {
+    throw new ApiError("forbidden", role === "owner" ? "Only team owners can do this." : "Only writers and owners can do this.");
   }
   return membership;
 }
