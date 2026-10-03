@@ -10,6 +10,7 @@ import { slackNotifier, type Notifier } from "./services/notifications.ts";
 import { users, type Locale } from "./db/schema.ts";
 import { ApiError } from "./errors.ts";
 import { agentTokenRoutes } from "./routes/agentTokens.ts";
+import { updateRoutes } from "./routes/updates.ts";
 import { appRoutes } from "./routes/apps.ts";
 import { guideRoutes } from "./routes/guides.ts";
 import { memberRoutes } from "./routes/members.ts";
@@ -27,6 +28,10 @@ export interface AppDeps {
   publicUrl?: string;
   /** Instance guide language, also used for notifications. */
   guideLanguage?: string;
+  /** GitHub `owner/repo` whose releases owners are told about; null turns the check off. */
+  updateRepository?: string | null;
+  /** For tests: how GitHub is reached. */
+  updateFetch?: typeof fetch;
 }
 
 /** `uk` when the browser prefers Ukrainian, otherwise English. */
@@ -43,6 +48,8 @@ export function createApp({
   notifier = slackNotifier,
   publicUrl = "http://localhost:5173",
   guideLanguage = "en",
+  updateRepository = null,
+  updateFetch,
 }: AppDeps) {
   const notifications = { db, notify: notifier, publicUrl, language: guideLanguage };
   const app = new Hono<AppEnv>();
@@ -83,6 +90,7 @@ export function createApp({
     c.set("db", db);
     c.set("ownerEmail", ownerEmail);
     c.set("directory", directory);
+    c.set("updates", { repository: updateRepository, fetch: updateFetch });
     c.set("notifications", notifications);
     c.set("user", user!);
     await next();
@@ -94,6 +102,7 @@ export function createApp({
   app.route("/", runRoutes);
   app.route("/", memberRoutes);
   app.route("/", agentTokenRoutes);
+  app.route("/", updateRoutes);
 
   return app;
 }

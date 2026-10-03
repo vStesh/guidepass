@@ -1,0 +1,56 @@
+name: Release
+
+# Pushing a tag vX.Y.Z publishes a GitHub release with that version's CHANGELOG
+# section. Instances learn about it from the releases list (see docs/updating.md).
+on:
+  push:
+    tags: ["v*.*.*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Publish release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Check the tag matches the version and the changelog
+        id: version
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          declared="$(node -p "require('./package.json').version")"
+          if [ "$version" != "$declared" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME doesn't match package.json version $declared"; exit 1
+          fi
+          # The section from "## [X.Y.Z] - <date>" up to the next "## [".
+          awk -v v="$version" '
+            $0 ~ "^## \\[" v "\\]" { found = 1; if ($0 ~ /Unreleased/) unreleased = 1; next }
+            found && /^## \[/ { exit }
+            found { print }
+            END { if (!found) exit 2; if (unreleased) exit 3 }
+          ' CHANGELOG.md > notes.md || {
+            code=$?
+            [ "$code" = 2 ] && echo "::error::CHANGELOG.md has no section for $version"
+            [ "$code" = 3 ] && echo "::error::CHANGELOG.md still says $version is Unreleased: give it a date first"
+            exit 1
+          }
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Check it builds and passes tests
+        run: |
+          npm ci
+          npm run typecheck
+          npm test
+          npm run build
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" --verify-tag --title "Guidepass ${{ steps.version.outputs.version }}" --notes-file notes.md

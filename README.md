@@ -63,7 +63,7 @@ Each instance sits next to existing infrastructure without touching it:
 - DNS in one of three ways: records in an existing Route 53 hosted zone in the same account; a new hosted zone for the subdomain, delegated from wherever the parent domain is managed; or no custom domain at first, using the AWS default domains;
 - the initial list of environments (default `dev`, `stg`, `prod`), which an owner can change later in the app.
 
-Step-by-step deployment, DNS options, Cognito settings and removal: [infra/README.md](infra/README.md). Connecting an AI agent: [docs/connect-agent.md](docs/connect-agent.md).
+Step-by-step deployment, DNS options, Cognito settings and removal: [infra/README.md](infra/README.md). Owners see when a new version is out; updating and rolling back: [docs/updating.md](docs/updating.md). Connecting an AI agent: [docs/connect-agent.md](docs/connect-agent.md).
 
 ## What it costs to run
 

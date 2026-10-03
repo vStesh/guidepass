@@ -206,3 +206,10 @@ export const results = pgTable(
   },
   (t) => [primaryKey({ columns: [t.runId, t.scenarioKey] })],
 );
+
+/** Small instance-wide values that aren't worth a table each, e.g. the last update check. */
+export const instanceState = pgTable("instance_state", {
+  key: text("key").primaryKey(),
+  value: jsonb("value").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});

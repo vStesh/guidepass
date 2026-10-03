@@ -100,6 +100,17 @@ variable "password_policy" {
   }
 }
 
+variable "update_repository" {
+  description = "GitHub repository (owner/repo) whose releases owners are told about. The API only reads its public releases list; nothing about the instance is sent. Empty turns the check off."
+  type        = string
+  default     = "vStesh/guidepass"
+
+  validation {
+    condition     = var.update_repository == "" || can(regex("^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$", var.update_repository))
+    error_message = "update_repository must look like owner/repo, or be empty."
+  }
+}
+
 variable "deletion_protection" {
   description = "Protect the database from deletion. Turn off only to tear an instance down."
   type        = bool

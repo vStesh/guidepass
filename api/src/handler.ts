@@ -27,6 +27,8 @@ const api = createApp({
   ownerEmail: required("OWNER_EMAIL"),
   publicUrl: required("PUBLIC_URL"),
   guideLanguage: process.env.GUIDE_LANGUAGE || "en",
+  // Empty when the instance was deployed with update checks off.
+  updateRepository: process.env.UPDATE_REPOSITORY || null,
 });
 
 const mcp = createMcpHandler({
