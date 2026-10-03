@@ -13,3 +13,13 @@ hosted_zone_id = "Z0123456789ABCDEFGHIJ"
 # cognito_user_pool_id = "eu-central-1_XXXXXXXXX"
 
 guide_language = "uk"
+
+# Password rules (defaults: at least 8 characters, no required character types).
+# With an existing user pool, set these to match the pool: they are only shown to people.
+# password_policy = {
+#   minimum_length    = 12
+#   require_lowercase = true
+#   require_uppercase = true
+#   require_numbers   = true
+#   require_symbols   = false
+# }

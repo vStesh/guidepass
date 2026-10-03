@@ -1,5 +1,7 @@
+import type { PasswordPolicy } from "./password.ts";
+
 export type RuntimeConfig =
-  | { authMode: "cognito"; cognitoUserPoolId: string; cognitoClientId: string }
+  | { authMode: "cognito"; cognitoUserPoolId: string; cognitoClientId: string; passwordPolicy?: PasswordPolicy }
   | { authMode: "local" };
 
 /**

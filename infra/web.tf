@@ -60,6 +60,14 @@ resource "aws_s3_object" "config" {
     authMode          = "cognito"
     cognitoUserPoolId = local.user_pool_id
     cognitoClientId   = aws_cognito_user_pool_client.web.id
+    # Shown when people choose a password, so they know the rules before Cognito rejects one.
+    passwordPolicy = {
+      minLength = var.password_policy.minimum_length
+      lowercase = var.password_policy.require_lowercase
+      uppercase = var.password_policy.require_uppercase
+      numbers   = var.password_policy.require_numbers
+      symbols   = var.password_policy.require_symbols
+    }
   })
 }
 

@@ -2,6 +2,7 @@ import { Amplify } from "aws-amplify";
 import { confirmSignIn, fetchAuthSession, signIn, signOut } from "aws-amplify/auth";
 import type { Auth, SignInStep } from "./auth.ts";
 import type { RuntimeConfig } from "./config.ts";
+import { defaultPasswordPolicy } from "./password.ts";
 
 function step(nextStep: { signInStep: string }): SignInStep {
   switch (nextStep.signInStep) {
@@ -24,6 +25,7 @@ export function cognitoAuth(config: Extract<RuntimeConfig, { authMode: "cognito"
   });
   return {
     mode: "cognito",
+    passwordPolicy: { ...defaultPasswordPolicy, ...config.passwordPolicy },
     async headers() {
       const session = await fetchAuthSession();
       const token = session.tokens?.idToken?.toString();

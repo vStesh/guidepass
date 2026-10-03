@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import type { Auth, SignInStep } from "../auth.ts";
 import { useI18n } from "../i18n/index.tsx";
+import { checkPassword } from "../password.ts";
 
 export function SignInPage({ auth, onSignedIn }: { auth: Auth; onSignedIn: () => void }) {
   const { t } = useI18n();
@@ -11,8 +12,15 @@ export function SignInPage({ auth, onSignedIn }: { auth: Auth; onSignedIn: () =>
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const rules = step?.kind === "newPassword" ? checkPassword(answer, auth.passwordPolicy) : [];
+
   async function submit(event: FormEvent) {
     event.preventDefault();
+    // Rules are checked here first, so a password Cognito would refuse isn't sent.
+    if (rules.some((r) => !r.ok)) {
+      setError(t("password.notYet"));
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -65,7 +73,23 @@ export function SignInPage({ auth, onSignedIn }: { auth: Auth; onSignedIn: () =>
           <label className="field">
             <span>{t("signIn.newPassword")}</span>
             <small className="muted">{t("signIn.newPasswordHint")}</small>
-            <input type="password" autoComplete="new-password" required value={answer} onChange={(e) => setAnswer(e.target.value)} />
+            <input
+              type="password"
+              autoComplete="new-password"
+              required
+              minLength={auth.passwordPolicy.minLength}
+              aria-describedby="password-rules"
+              value={answer}
+              onChange={(e) => setAnswer(e.target.value)}
+            />
+            <ul id="password-rules" className="password-rules" aria-live="polite">
+              {rules.map(({ rule, ok }) => (
+                <li key={rule} className={ok ? "ok" : undefined}>
+                  <span aria-hidden="true">{ok ? "✓" : "•"}</span>{" "}
+                  {rule === "length" ? t("password.length", { count: auth.passwordPolicy.minLength }) : t(`password.${rule}`)}
+                </li>
+              ))}
+            </ul>
           </label>
         )}
         {step?.kind === "code" && (

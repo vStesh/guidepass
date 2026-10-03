@@ -74,6 +74,32 @@ variable "db_auto_pause_seconds" {
   default     = 900
 }
 
+variable "password_policy" {
+  description = <<-EOT
+    Password rules. In a pool Guidepass creates they are enforced by Cognito; with an
+    existing pool (cognito_user_pool_id) the pool keeps its own rules, so set this to
+    match them: the web app shows these rules when people choose a password.
+  EOT
+  type = object({
+    minimum_length                   = optional(number, 8)
+    require_lowercase                = optional(bool, false)
+    require_uppercase                = optional(bool, false)
+    require_numbers                  = optional(bool, false)
+    require_symbols                  = optional(bool, false)
+    temporary_password_validity_days = optional(number, 7)
+  })
+  default = {}
+
+  validation {
+    condition     = var.password_policy.minimum_length >= 6 && var.password_policy.minimum_length <= 99
+    error_message = "password_policy.minimum_length must be between 6 and 99 (Cognito's limits)."
+  }
+  validation {
+    condition     = var.password_policy.temporary_password_validity_days >= 1 && var.password_policy.temporary_password_validity_days <= 365
+    error_message = "password_policy.temporary_password_validity_days must be between 1 and 365."
+  }
+}
+
 variable "deletion_protection" {
   description = "Protect the database from deletion. Turn off only to tear an instance down."
   type        = bool

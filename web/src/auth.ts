@@ -1,10 +1,13 @@
 import type { RuntimeConfig } from "./config.ts";
+import { defaultPasswordPolicy, type PasswordPolicy } from "./password.ts";
 
 /** What the sign-in screen has to ask for next. */
 export type SignInStep = { kind: "done" } | { kind: "newPassword" } | { kind: "code" };
 
 export interface Auth {
   mode: RuntimeConfig["authMode"];
+  /** Rules for a new password, shown on the sign-in screen. */
+  passwordPolicy: PasswordPolicy;
   /** Headers that identify the signed-in person to the API, or null when signed out. */
   headers(): Promise<Record<string, string> | null>;
   signIn(email: string, password: string): Promise<SignInStep>;
@@ -19,6 +22,7 @@ const LOCAL_KEY = "guidepass.localUser";
 function localAuth(): Auth {
   return {
     mode: "local",
+    passwordPolicy: defaultPasswordPolicy,
     async headers() {
       const email = localStorage.getItem(LOCAL_KEY);
       return email ? { "x-local-user": email } : null;
