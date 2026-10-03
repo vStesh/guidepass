@@ -180,6 +180,14 @@ export interface Invitation {
   createdAt: string;
 }
 
+export interface UpdateStatus {
+  current: string;
+  enabled: boolean;
+  latest: { version: string; name: string; notes: string; url: string; publishedAt: string } | null;
+  updateAvailable: boolean;
+  checkedAt: string | null;
+}
+
 export interface AgentToken {
   id: string;
   name: string;
@@ -236,6 +244,7 @@ export function createApi(auth: Auth) {
 
   return {
     me: () => request<Me>("GET", "/me"),
+    updates: (refresh = false) => request<UpdateStatus>("GET", refresh ? "/updates?refresh=1" : "/updates"),
     updateMe: (body: { name?: string; locale?: Locale }) => request<{ user: User }>("PATCH", "/me", body),
     setup: (teamName: string) => request<{ team: Me["team"] }>("POST", "/setup", { teamName }),
     environments: () => request<{ environments: Environment[] }>("GET", "/environments"),

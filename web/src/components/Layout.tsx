@@ -3,6 +3,7 @@ import { NavLink, Outlet, useLocation } from "react-router";
 import { useI18n } from "../i18n/index.tsx";
 import { isOwner, useSession } from "../session.tsx";
 import { ErrorBox } from "./ui.tsx";
+import { UpdateBanner } from "./UpdateBanner.tsx";
 
 const repo = "https://github.com/vStesh/guidepass";
 
@@ -31,6 +32,7 @@ export function Layout() {
       </header>
       <main className="page">
         {!me.user.name && !onProfile && <AskName />}
+        <UpdateBanner />
         <Outlet />
       </main>
       <Footer />

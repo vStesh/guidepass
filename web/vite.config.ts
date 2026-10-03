@@ -2,7 +2,8 @@ import react from "@vitejs/plugin-react";
 import { readFileSync } from "node:fs";
 import { defineConfig } from "vite";
 
-const { version } = JSON.parse(readFileSync(new URL("./package.json", import.meta.url), "utf8")) as { version: string };
+// One version for the whole of Guidepass: the repository root's package.json.
+const { version } = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")) as { version: string };
 
 // In development the API runs on :8787 (`npm run dev -w api`); in AWS both are
 // served from one domain: the API under /api, the MCP server at /mcp.

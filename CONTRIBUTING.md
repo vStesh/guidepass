@@ -40,6 +40,13 @@ CI runs the same checks, plus `terraform fmt -check` and `terraform validate`, a
 - **Changelog:** add a line to `CHANGELOG.md` under the unreleased version.
 - **Commits:** short imperative subject (`feat: …`, `fix: …`, `docs: …`), one change per pull request.
 
+## Releasing (maintainers)
+
+1. Pick the version (SemVer): set `version` in the root `package.json` (the one version of Guidepass; the API and the web app read it at build time).
+2. In `CHANGELOG.md`, change `## [X.Y.Z] - Unreleased` to today's date and say plainly if the release needs anything from people running an instance (a new Terraform variable, an IAM permission). Start a new `Unreleased` section above it when work continues.
+3. Merge that through a pull request, then tag `main`: `git tag vX.Y.Z && git push origin vX.Y.Z`.
+4. The *Release* workflow checks the tag against `package.json` and the changelog, runs the checks and publishes the GitHub release with that changelog section. Instances show it to their owners within a day.
+
 ## Licence
 
 By contributing you agree that your contributions are licensed under the [MIT License](LICENSE).

@@ -26,6 +26,8 @@ const app = new Hono()
       directory: localDirectory,
       publicUrl: process.env.PUBLIC_URL ?? "http://localhost:5173",
       guideLanguage: process.env.GUIDE_LANGUAGE ?? "en",
+      // Off unless set, so local development doesn't call GitHub.
+      updateRepository: process.env.UPDATE_REPOSITORY || null,
     }),
   )
   .all("/mcp", (c) => mcp(c.req.raw));

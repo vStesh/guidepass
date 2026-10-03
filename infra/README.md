@@ -59,6 +59,7 @@ One deployment per project, in the project's own AWS account. Full list with def
 | `domain_name` | Full domain of the instance, e.g. `gp.example.com`; leave empty to use the CloudFront domain |
 | `hosted_zone_id` | Existing Route 53 zone in this account to add records to; leave empty to create a zone for `domain_name` and delegate it (its name servers are an output) |
 | `owner_email` | The only person allowed to set up the instance on first sign-in; everyone else joins by invitation |
+| `update_repository` | GitHub repository whose releases owners are told about (default `vStesh/guidepass`; a fork can point to itself). Only the public releases list is read; empty turns the check off |
 | `password_policy` | Password rules: `minimum_length` (default 8), `require_lowercase`, `require_uppercase`, `require_numbers`, `require_symbols` (all `false` by default), `temporary_password_validity_days` (7). Enforced in a pool Guidepass creates; with an existing pool set it to match the pool, since it's only shown to people choosing a password. Can be changed later with another `apply` |
 | `cognito_user_pool_id` | Existing user pool to add a Guidepass app client to; leave empty to create a pool (see Cognito options) |
 | `environments` | Initial environments, `[{ key, name }]`, default dev / stg / prod; applied on first deploy only, edited in the app afterwards |

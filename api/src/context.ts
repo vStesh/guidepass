@@ -11,6 +11,7 @@ export interface AppEnv {
   Variables: {
     db: Db;
     user: { id: string; email: string; name: string | null; locale: Locale };
+    updates: { repository: string | null; fetch?: typeof fetch };
     /** Only this email may run `/setup`; unset in local development. */
     ownerEmail: string | undefined;
     directory: UserDirectory;

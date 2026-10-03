@@ -1,10 +1,12 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import type { Environment } from "../api.ts";
-import { ErrorBox, Load, slugify } from "../components/ui.tsx";
+import { ErrorBox, Load, formatDate, slugify } from "../components/ui.tsx";
+import { UPDATING_DOCS } from "../components/UpdateBanner.tsx";
+import type { UpdateStatus } from "../api.ts";
 import { useI18n } from "../i18n/index.tsx";
 import { useLoad, useSession } from "../session.tsx";
 
-/** Owner settings for the instance: environments. */
+/** Owner settings for the instance: environments and version. */
 export function SettingsPage() {
   const { t } = useI18n();
   const { api } = useSession();
@@ -24,6 +26,7 @@ export function SettingsPage() {
   return (
     <>
       <h1>{t("settings.title")}</h1>
+      <VersionCard />
       <section className="card stack">
         <h2>{t("settings.environments")}</h2>
         <p className="muted">{t("settings.environmentsHint")}</p>
@@ -158,3 +161,59 @@ function NewEnvironment({ onAdded, onError }: { onAdded: () => void; onError: (e
     </form>
   );
 }
+
+/** This instance's version and the newest release, with a manual check. */
+function VersionCard() {
+  const { t, locale } = useI18n();
+  const { api } = useSession();
+  const [status, setStatus] = useState<UpdateStatus | null>(null);
+  const [checking, setChecking] = useState(false);
+  const [error, setError] = useState<unknown>(null);
+
+  async function check(refresh: boolean) {
+    setChecking(true);
+    setError(null);
+    try {
+      setStatus(await api.updates(refresh));
+    } catch (err) {
+      setError(err);
+    } finally {
+      setChecking(false);
+    }
+  }
+
+  useEffect(() => {
+    void check(false);
+    // Once, when the page opens.
+  }, []);
+
+  return (
+    <section className="card stack section-gap-sm">
+      <h2>{t("update.title")}</h2>
+      <p>{t("update.current", { version: __APP_VERSION__ })}</p>
+      {status && !status.enabled && <p className="muted">{t("update.off")}</p>}
+      {status?.enabled && (
+        <>
+          <p className={status.updateAvailable ? undefined : "muted"}>
+            {status.latest
+              ? status.updateAvailable
+                ? t("update.available", { version: status.latest.version, current: status.current })
+                : t("update.upToDate")
+              : t("update.noReleases")}
+          </p>
+          {status.checkedAt && <p className="muted small">{t("update.checked", { date: formatDate(status.checkedAt, locale) })}</p>}
+          <div className="row">
+            <button type="button" className="button button-small" disabled={checking} onClick={() => void check(true)}>
+              {t("update.checkNow")}
+            </button>
+            <a className="button button-small button-ghost" href={UPDATING_DOCS} target="_blank" rel="noopener noreferrer">
+              {t("update.how")}
+            </a>
+          </div>
+        </>
+      )}
+      {error ? <ErrorBox error={error} /> : null}
+    </section>
+  );
+}
+

@@ -114,6 +114,7 @@ resource "aws_lambda_function" "api" {
       OWNER_EMAIL          = var.owner_email
       GUIDE_LANGUAGE       = var.guide_language
       PUBLIC_URL           = local.public_url
+      UPDATE_REPOSITORY    = var.update_repository
     })
   }
 
