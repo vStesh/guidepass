@@ -4,6 +4,11 @@ All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- Screenshots as proof: testers attach up to 5 images to a result from the phone's camera or gallery. They are scaled down in the browser (longest side 1600 px, JPEG), uploaded straight to a private S3 bucket with a signed form valid for 2 minutes (key, type and size checked by S3, then by the API), and shown to the team and to agents (`get_results`) through links that expire in an hour. A screenshot counts as proof for a fail or for a pass that needs proof; the last proof of such a result can't be removed. Locally, screenshots are kept in `api/.data/evidence`. Migration `0010`; Terraform adds the bucket, its CORS rule, the Lambda permission and the bucket in the Content-Security-Policy.
+
 ## [0.1.0] - 2026-10-03
 
 ### Added

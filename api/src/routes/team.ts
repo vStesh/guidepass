@@ -11,9 +11,10 @@ export const teamRoutes = new Hono<AppEnv>();
 /** The signed-in person and their team, or `team: null` before setup or an invitation. */
 teamRoutes.get("/me", async (c) => {
   const membership = await findMembership(c);
-  if (!membership) return c.json({ user: c.var.user, team: null });
+  const features = { attachments: !!c.var.evidence };
+  if (!membership) return c.json({ user: c.var.user, team: null, features });
   const [team] = await c.var.db.select({ id: teams.id, name: teams.name }).from(teams).where(eq(teams.id, membership.teamId));
-  return c.json({ user: c.var.user, team: { ...team!, role: membership.role } });
+  return c.json({ user: c.var.user, team: { ...team!, role: membership.role }, features });
 });
 
 /** Update your own profile: display name and interface language. */

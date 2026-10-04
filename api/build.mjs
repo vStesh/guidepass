@@ -1,5 +1,7 @@
 // Bundles the Lambda handlers into api/dist, one folder per function, for Terraform to zip.
-// The AWS SDK v3 is provided by the Node.js Lambda runtime, so it stays out of the bundle.
+// The Lambda runtime provides the AWS SDK v3 clients we use as-is (Cognito, RDS Data);
+// everything for S3 (including the presigning helpers) is bundled, so the bundle
+// doesn't depend on which helpers a runtime version happens to include.
 import { build } from "esbuild";
 import { cpSync, rmSync } from "node:fs";
 
@@ -13,7 +15,7 @@ const common = {
   format: "esm",
   minify: true,
   sourcemap: false,
-  external: ["@aws-sdk/*"],
+  external: ["@aws-sdk/client-cognito-identity-provider", "@aws-sdk/client-rds-data"],
   // Some dependencies still call require(); give ESM bundles one.
   banner: { js: "import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);" },
   logLevel: "info",

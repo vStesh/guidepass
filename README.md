@@ -8,7 +8,7 @@ A small web app for manual testing. An AI agent writes test guides for a build, 
 It is built for small teams that ship mobile and web apps with AI coding agents: the agent knows what changed, people know whether it works on a real phone. Guidepass is the place where the two meet.
 
 - **Guides from the agent.** Through the MCP server an agent (Claude Code, or any MCP client) reads the writing instructions, uploads a guide as JSON and gets a diff of what needs retesting. Versions keep results for unchanged scenarios.
-- **Runs on a phone.** A tester picks the environment, platform, device, the build or commit actually installed and the app account they use, then marks each scenario: pass, fail, blocked or skip, with a note, proof and an issue link.
+- **Runs on a phone.** A tester picks the environment, platform, device, the build or commit actually installed and the app account they use, then marks each scenario: pass, fail, blocked or skip, with a note, proof (text or screenshots) and an issue link.
 - **Results for people and agents.** Every tester's result per environment and platform, combined into verdicts (a pass next to a fail is a *conflict*). The agent reads them with `get_results`; Slack gets new guides and runs with problems.
 - **Self-hosted, pay-per-use.** One instance per project in your own AWS account, about $0.60 a month idle (see [costs](#what-it-costs-to-run)).
 

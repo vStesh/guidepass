@@ -123,8 +123,9 @@ locals {
 }
 
 # Security headers for every response. The CSP allows only this site's own
-# scripts and styles, and network calls to this site and Cognito; guide text
-# can't load remote images or post forms elsewhere.
+# scripts and styles, and network calls to this site, Cognito and the evidence
+# bucket (screenshot uploads and views); guide text can't load other remote
+# images or post forms elsewhere.
 resource "aws_cloudfront_response_headers_policy" "security" {
   name = "${var.name_prefix}-security"
 
@@ -134,9 +135,9 @@ resource "aws_cloudfront_response_headers_policy" "security" {
         "default-src 'self'",
         "script-src 'self'",
         "style-src 'self'",
-        "img-src 'self' data:",
+        "img-src 'self' data: ${local.evidence_origin}",
         "font-src 'self'",
-        "connect-src 'self' https://cognito-idp.${var.region}.amazonaws.com",
+        "connect-src 'self' https://cognito-idp.${var.region}.amazonaws.com ${local.evidence_origin}",
         "form-action 'self'",
         "frame-ancestors 'none'",
         "base-uri 'none'",

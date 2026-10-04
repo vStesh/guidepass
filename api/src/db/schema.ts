@@ -1,5 +1,6 @@
 import {
   boolean,
+  index,
   integer,
   jsonb,
   pgTable,
@@ -213,3 +214,23 @@ export const instanceState = pgTable("instance_state", {
   value: jsonb("value").notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+/**
+ * Screenshots attached as proof to a scenario of a run. The file lives in the
+ * evidence bucket under `evidence/<runId>/<id>`; `uploadedAt` is set once the
+ * browser's upload is confirmed, so started-but-abandoned uploads stay hidden.
+ */
+export const attachments = pgTable(
+  "attachments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    runId: uuid("run_id").notNull().references(() => runs.id),
+    scenarioKey: text("scenario_key").notNull(),
+    contentType: text("content_type").notNull(),
+    size: integer("size").notNull().default(0),
+    createdAt: createdAt(),
+    uploadedAt: timestamp("uploaded_at", { withTimezone: true }),
+  },
+  (t) => [index("attachments_run_scenario").on(t.runId, t.scenarioKey)],
+);
+

@@ -6,12 +6,16 @@ import { required } from "./config.ts";
 import { createDataApiDb } from "./db/client.ts";
 import { cognitoDirectory } from "./directory.ts";
 import { createMcpHandler } from "./mcp/server.ts";
+import { s3EvidenceStorage } from "./storage.ts";
 
 const db = createDataApiDb({
   resourceArn: required("DB_CLUSTER_ARN"),
   secretArn: required("DB_SECRET_ARN"),
   database: required("DB_NAME"),
 });
+
+// Screenshots attached as proof, when the instance has a bucket for them.
+const evidence = process.env.EVIDENCE_BUCKET ? s3EvidenceStorage(process.env.EVIDENCE_BUCKET) : null;
 
 const api = createApp({
   db,
@@ -29,10 +33,12 @@ const api = createApp({
   guideLanguage: process.env.GUIDE_LANGUAGE || "en",
   // Empty when the instance was deployed with update checks off.
   updateRepository: process.env.UPDATE_REPOSITORY || null,
+  evidenceStorage: evidence,
 });
 
 const mcp = createMcpHandler({
   db,
+  evidenceStorage: evidence,
   guideLanguage: process.env.GUIDE_LANGUAGE || "en",
   publicUrl: required("PUBLIC_URL"),
 });

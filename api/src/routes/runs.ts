@@ -3,10 +3,12 @@ import { and, eq, isNotNull, isNull } from "drizzle-orm";
 import { Hono } from "hono";
 import { z } from "zod";
 import { requireMembership, type AppEnv } from "../context.ts";
-import { apps, guideVersions, guides, results, runs } from "../db/schema.ts";
+import { apps, attachments, guideVersions, guides, results, runs } from "../db/schema.ts";
 import { ApiError } from "../errors.ts";
 import { announceRunProblems } from "../services/notifications.ts";
 import { countRun, getGuideResults, loadGuide } from "../services/results.ts";
+import { attachmentKey, attachmentsOf, reservedCount, uploadedCount } from "../services/attachments.ts";
+import { evidenceTypes, MAX_EVIDENCE_BYTES, MAX_EVIDENCE_FILES } from "../storage.ts";
 import { validate } from "../validate.ts";
 
 export const runRoutes = new Hono<AppEnv>();
@@ -85,7 +87,7 @@ runRoutes.get(
   async (c) => {
     const { teamId } = await requireMembership(c);
     const { guide, app } = await loadGuide(c.var.db, teamId, c.req.valid("param").guideId);
-    return c.json(await getGuideResults(c.var.db, guide, app, c.req.valid("query")));
+    return c.json(await getGuideResults(c.var.db, guide, app, c.req.valid("query"), c.var.evidence));
   },
 );
 
@@ -112,11 +114,16 @@ async function loadRun(c: Parameters<typeof requireMembership>[0], runId: string
 runRoutes.get("/runs/:runId", runParam, async (c) => {
   const row = await loadRun(c, c.req.valid("param").runId);
   const rows = await c.var.db.select().from(results).where(eq(results.runId, row.run.id));
+  const shots = await attachmentsOf(c.var.db, c.var.evidence, [row.run.id]);
+  const scenarioShots = Object.fromEntries(
+    [...shots].map(([id, list]) => [id.slice(row.run.id.length + 1), list]),
+  );
   return c.json({
     run: { ...row.run, version: row.version, guideId: row.guideId },
     app: row.app,
     content: row.content,
     results: rows,
+    attachments: scenarioShots,
     counts: countRun(row.content, row.run.environmentKey, row.run.platform, rows),
   });
 });
@@ -161,7 +168,8 @@ runRoutes.put(
     // An omitted field keeps the existing value; an empty one clears it.
     const [existing] = await c.var.db.select().from(results).where(where);
     const nextEvidence = evidence !== undefined ? evidence || null : (existing?.evidence ?? null);
-    if (needsEvidence(scenario, status) && !nextEvidence) {
+    // A screenshot counts as proof as well as text does.
+    if (needsEvidence(scenario, status) && !nextEvidence && !(await uploadedCount(c.var.db, runId, scenarioKey))) {
       throw new ApiError(
         "invalid",
         status === "fail" ? "A fail needs proof." : "This scenario needs proof for a pass.",
@@ -219,3 +227,120 @@ runRoutes.patch(
     return c.json({ run });
   },
 );
+
+/** The caller's own open run, or an error: only the tester marks and attaches, until they finish. */
+async function ownOpenRun(c: Parameters<typeof requireMembership>[0], runId: string) {
+  const row = await loadRun(c, runId);
+  if (row.run.testerId !== c.var.user.id) throw new ApiError("forbidden", "You can only change your own runs.");
+  if (row.run.finishedAt) throw new ApiError("conflict", "This run is finished. Reopen it to change results.");
+  return row;
+}
+
+function storageOf(c: Parameters<typeof requireMembership>[0]) {
+  if (!c.var.evidence) throw new ApiError("not_found", "Screenshots aren't set up on this instance.");
+  return c.var.evidence;
+}
+
+/**
+ * Start attaching a screenshot to a scenario of your run: returns a short-lived
+ * form the browser posts the file to (S3 checks its key, type and size), then
+ * call `.../complete`.
+ */
+runRoutes.post(
+  "/runs/:runId/results/:scenarioKey/attachments",
+  validate("param", z.object({ runId: z.uuid(), scenarioKey: z.string().min(1) })),
+  validate("json", z.object({ contentType: z.enum(evidenceTypes) })),
+  async (c) => {
+    const storage = storageOf(c);
+    const { runId, scenarioKey } = c.req.valid("param");
+    const row = await ownOpenRun(c, runId);
+    const scenario = row.content.scenarios.find((s) => s.key === scenarioKey);
+    if (!scenario || !appliesTo(scenario, row.run.environmentKey, row.run.platform)) {
+      throw new ApiError("invalid", `Scenario ${scenarioKey} does not apply to this run.`);
+    }
+    if ((await reservedCount(c.var.db, runId, scenarioKey)) >= MAX_EVIDENCE_FILES) {
+      throw new ApiError("conflict", `A result can have up to ${MAX_EVIDENCE_FILES} screenshots.`, { reason: "too_many_files" });
+    }
+    const { contentType } = c.req.valid("json");
+    const [attachment] = await c.var.db.insert(attachments).values({ runId, scenarioKey, contentType }).returning();
+    const upload = await storage.presignUpload(attachmentKey(runId, attachment!.id), contentType);
+    return c.json({ attachment: { id: attachment!.id }, upload, maxBytes: MAX_EVIDENCE_BYTES }, 201);
+  },
+);
+
+/** Confirms the browser's upload: the file must be there, of the declared type and size. */
+runRoutes.post(
+  "/attachments/:attachmentId/complete",
+  validate("param", z.object({ attachmentId: z.uuid() })),
+  async (c) => {
+    const storage = storageOf(c);
+    const [attachment] = await c.var.db.select().from(attachments).where(eq(attachments.id, c.req.valid("param").attachmentId));
+    if (!attachment) throw new ApiError("not_found", "Screenshot not found.");
+    await ownOpenRun(c, attachment.runId);
+    const key = attachmentKey(attachment.runId, attachment.id);
+    const object = await storage.head(key);
+    if (!object) throw new ApiError("invalid", "The file hasn't been uploaded.", { reason: "not_uploaded" });
+    if (object.size > MAX_EVIDENCE_BYTES || object.contentType !== attachment.contentType) {
+      await storage.remove(key);
+      throw new ApiError("invalid", "The file isn't an image of the allowed size.");
+    }
+    // The limit is checked again here: several uploads may have been started at once.
+    if (!attachment.uploadedAt && (await uploadedCount(c.var.db, attachment.runId, attachment.scenarioKey)) >= MAX_EVIDENCE_FILES) {
+      await storage.remove(key);
+      await c.var.db.delete(attachments).where(eq(attachments.id, attachment.id));
+      throw new ApiError("conflict", `A result can have up to ${MAX_EVIDENCE_FILES} screenshots.`, { reason: "too_many_files" });
+    }
+    const [done] = await c.var.db
+      .update(attachments)
+      .set({ size: object.size, uploadedAt: new Date() })
+      .where(eq(attachments.id, attachment.id))
+      .returning();
+    return c.json({
+      attachment: { id: done!.id, contentType: done!.contentType, size: done!.size, url: await storage.viewUrl(key) },
+    });
+  },
+);
+
+/** Removes a screenshot from your open run. */
+runRoutes.delete(
+  "/attachments/:attachmentId",
+  validate("param", z.object({ attachmentId: z.uuid() })),
+  async (c) => {
+    const storage = storageOf(c);
+    const [attachment] = await c.var.db.select().from(attachments).where(eq(attachments.id, c.req.valid("param").attachmentId));
+    if (!attachment) throw new ApiError("not_found", "Screenshot not found.");
+    const row = await ownOpenRun(c, attachment.runId);
+    const scenario = row.content.scenarios.find((s) => s.key === attachment.scenarioKey);
+    await c.var.db.transaction(async (tx) => {
+      // The scenario's screenshots stay locked until this commits, so two removals
+      // at once can't both take the last proof away.
+      const uploaded = await tx
+        .select({ id: attachments.id })
+        .from(attachments)
+        .where(
+          and(
+            eq(attachments.runId, attachment.runId),
+            eq(attachments.scenarioKey, attachment.scenarioKey),
+            isNotNull(attachments.uploadedAt),
+          ),
+        )
+        .for("update");
+      const [result] = await tx
+        .select()
+        .from(results)
+        .where(and(eq(results.runId, attachment.runId), eq(results.scenarioKey, attachment.scenarioKey)));
+      const isLastProof =
+        !!result && !result.evidence && !!attachment.uploadedAt && !!scenario && needsEvidence(scenario, result.status) && uploaded.length <= 1;
+      if (isLastProof) {
+        throw new ApiError("invalid", "This is the only proof of the result. Add another or change the status first.", {
+          reason: "evidence_required",
+        });
+      }
+      await tx.delete(attachments).where(eq(attachments.id, attachment.id));
+    });
+    // The file goes after the row, so a failure never leaves a row pointing at nothing.
+    await storage.remove(attachmentKey(attachment.runId, attachment.id));
+    return c.json({ removed: attachment.id });
+  },
+);
+
