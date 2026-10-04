@@ -47,6 +47,13 @@ data "aws_iam_policy_document" "lambda" {
     resources = ["arn:aws:cognito-idp:${var.region}:${data.aws_caller_identity.current.account_id}:userpool/${local.user_pool_id}"]
   }
 
+  # Screenshots attached as proof: the API signs uploads and views, checks and removes files.
+  statement {
+    sid       = "Evidence"
+    actions   = ["s3:PutObject", "s3:GetObject", "s3:DeleteObject"]
+    resources = ["${aws_s3_bucket.evidence.arn}/evidence/*"]
+  }
+
   # Only for a pool Guidepass owns: invitations create accounts there.
   dynamic "statement" {
     for_each = local.create_pool ? [1] : []
@@ -115,6 +122,7 @@ resource "aws_lambda_function" "api" {
       GUIDE_LANGUAGE       = var.guide_language
       PUBLIC_URL           = local.public_url
       UPDATE_REPOSITORY    = var.update_repository
+      EVIDENCE_BUCKET      = aws_s3_bucket.evidence.id
     })
   }
 

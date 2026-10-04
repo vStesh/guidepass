@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router";
 import { appliesTo, looksLikeSecret, needsEvidence, type ResultStatus, type Scenario } from "@guidepass/schema/core";
-import type { RunDetail, RunResult } from "../api.ts";
+import type { Attachment, RunDetail, RunResult } from "../api.ts";
+import { AddScreenshot, MAX_SCREENSHOTS, ScreenshotList } from "../components/Screenshots.tsx";
 import { ErrorBox, Load, ProgressBar, platformLabel } from "../components/ui.tsx";
 import { useI18n } from "../i18n/index.tsx";
 import { useLoad, useSession } from "../session.tsx";
@@ -62,6 +63,8 @@ export function RunPage() {
                   platformName={platformName}
                   editable={editable}
                   result={data.results.find((r) => r.scenarioKey === s.key)}
+                  attachments={data.attachments?.[s.key] ?? []}
+                  canAttach={!!me.features?.attachments}
                   onSaved={reload}
                 />
               ))}
@@ -106,6 +109,8 @@ function ScenarioCard({
   platformName,
   editable,
   result,
+  attachments,
+  canAttach,
   onSaved,
 }: {
   runId: string;
@@ -114,6 +119,10 @@ function ScenarioCard({
   platformName: (k: string) => string;
   editable: boolean;
   result?: RunResult;
+  /** Screenshots already attached to this scenario. */
+  attachments: Attachment[];
+  /** Whether this instance stores screenshots. */
+  canAttach: boolean;
   onSaved: () => void;
 }) {
   const { t } = useI18n();
@@ -136,7 +145,8 @@ function ScenarioCard({
     setError(null);
     setHint(null);
     // Checked here too, so the tester learns what's missing before anything is sent.
-    if (status !== "untested" && needsEvidence(scenario, status) && !evidence.trim()) {
+    // A screenshot is proof as well as text.
+    if (status !== "untested" && needsEvidence(scenario, status) && !evidence.trim() && !attachments.length) {
       setHint(t(status === "fail" ? "run.proofForFail" : "run.proofForPass"));
       return;
     }
@@ -197,8 +207,37 @@ function ScenarioCard({
         </label>
       )}
       {editable ? (
-        <details className="proof-edit" open={!!(evidence || issueUrl || scenario.evidence || status === "fail" || hint)}>
+        <details className="proof-edit" open={!!(evidence || issueUrl || attachments.length || scenario.evidence || status === "fail" || hint)}>
           <summary>{t("run.proofTitle")}</summary>
+          {(canAttach || attachments.length > 0) && (
+            <div className="field">
+              <span>{t("shots.title")}</span>
+              <ScreenshotList
+                items={attachments}
+                onRemove={async (id) => {
+                  setError(null);
+                  try {
+                    await api.removeAttachment(id);
+                    onSaved();
+                  } catch (err) {
+                    setError(err);
+                  }
+                }}
+              />
+              {canAttach && attachments.length < MAX_SCREENSHOTS && (
+                <AddScreenshot
+                  runId={runId}
+                  scenarioKey={scenario.key}
+                  remaining={MAX_SCREENSHOTS - attachments.length}
+                  onAdded={() => {
+                    setHint(null);
+                    onSaved();
+                  }}
+                  onError={setError}
+                />
+              )}
+            </div>
+          )}
           <label className="field">
             <span>{t("run.evidence")}</span>
             <textarea
@@ -223,7 +262,7 @@ function ScenarioCard({
           </label>
         </details>
       ) : (
-        <Proof evidence={result?.evidence ?? null} issueUrl={result?.issueUrl ?? null} />
+        <Proof evidence={result?.evidence ?? null} issueUrl={result?.issueUrl ?? null} attachments={attachments} />
       )}
       {hint && <p className="notice notice-error">{hint}</p>}
       {saved && <span className="muted small">{t("run.saved")}</span>}

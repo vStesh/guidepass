@@ -1,7 +1,8 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
 import type { GuideContent, Platform, Scenario } from "@guidepass/schema/core";
-import type { App, Counts, Environment, GuideDetail, GuideResults } from "../api.ts";
+import type { App, Attachment, Counts, Environment, GuideDetail, GuideResults } from "../api.ts";
+import { ScreenshotList } from "../components/Screenshots.tsx";
 import { Chip, ErrorBox, Load, Markdown, ProgressBar, TypeBadge, VerdictBadge, authorLabel, formatDate, platformLabel } from "../components/ui.tsx";
 import { useI18n } from "../i18n/index.tsx";
 import { canWrite, useLoad, useSession } from "../session.tsx";
@@ -393,7 +394,7 @@ function CellDetails({
               </span>
               <RunBuild build={r.build} commit={r.commit} account={r.account} />
               {r.note && <p className="pre-line">{r.note}</p>}
-              <Proof evidence={r.evidence} issueUrl={r.issueUrl} />
+              <Proof evidence={r.evidence} issueUrl={r.issueUrl} attachments={r.attachments} />
             </li>
           ))}
         </ul>
@@ -575,11 +576,20 @@ export function RunBuild({ build, commit, account }: { build: string | null; com
 }
 
 /** Proof and the issue link behind a result. Only web links become clickable. */
-export function Proof({ evidence, issueUrl }: { evidence: string | null; issueUrl: string | null }) {
+export function Proof({
+  evidence,
+  issueUrl,
+  attachments = [],
+}: {
+  evidence: string | null;
+  issueUrl: string | null;
+  attachments?: Attachment[];
+}) {
   const { t } = useI18n();
-  if (!evidence && !issueUrl) return null;
+  if (!evidence && !issueUrl && !attachments.length) return null;
   return (
     <div className="proof">
+      <ScreenshotList items={attachments} />
       {evidence && (
         <div>
           <strong>{t("run.evidence")}:</strong> <Markdown text={evidence} />

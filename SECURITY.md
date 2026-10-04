@@ -19,6 +19,6 @@ Out of scope: your AWS account's own configuration, Cognito user pools Guidepass
 ## For people running an instance
 
 - **Agent tokens** grant access to your instance's guides and results. Each token belongs to one member: owners issue them (the "Whose agent" field) and send them privately, writers create their own. Removing a member revokes their tokens; revoke unused ones on the Team page.
-- **Proof on results** is visible to the whole team and to agents. Guidepass refuses text that looks like a token or key, but it can't catch everything: share sanitized requests only.
+- **Proof on results** is visible to the whole team and to agents. Guidepass refuses text that looks like a token or key, but it can't catch everything: share sanitized requests only, and crop screenshots that show other people's data. Screenshots live in a private bucket and are only reachable through links that expire in an hour.
 - **Slack webhooks** are visible to owners only; treat them as secrets.
 - Deploy with the least-privilege policy in `infra/deploy-policy.json` rather than administrator credentials.

@@ -10,6 +10,7 @@ import { environments } from "../db/schema.ts";
 import { ApiError } from "../errors.ts";
 import { authenticateAgent, type AgentIdentity } from "../services/agentTokens.ts";
 import { MAX_BODY } from "../limits.ts";
+import type { EvidenceStorage } from "../storage.ts";
 import { createArea, getGuideDetail, listAppsWithAreas, listGuides, setGuideStatus } from "../services/catalog.ts";
 import { uploadGuide } from "../services/guides.ts";
 import { announceGuideUpload, slackNotifier, type Notifier } from "../services/notifications.ts";
@@ -23,6 +24,8 @@ export interface McpDeps {
   publicUrl: string;
   /** Sends Slack messages; defaults to the real webhook call. */
   notifier?: Notifier;
+  /** Screenshots attached as proof; their links are included in results. */
+  evidenceStorage?: EvidenceStorage | null;
 }
 
 const SERVER_INSTRUCTIONS = `Guidepass holds manual test guides for app builds and the results people record on their devices.
@@ -70,7 +73,7 @@ async function run(fn: () => Promise<unknown>) {
 
 const versionNumber = z.number().int().min(1).max(2_147_483_647);
 
-function buildServer({ db, guideLanguage, publicUrl, notifier }: McpDeps, agent: AgentIdentity): McpServer {
+function buildServer({ db, guideLanguage, publicUrl, notifier, evidenceStorage }: McpDeps, agent: AgentIdentity): McpServer {
   const server = new McpServer({ name: "guidepass", version: "0.1.0" }, { instructions: SERVER_INSTRUCTIONS });
   const { teamId } = agent;
   const guideUrl = (id: string) => `${publicUrl}/guides/${id}`;
@@ -161,7 +164,7 @@ function buildServer({ db, guideLanguage, publicUrl, notifier }: McpDeps, agent:
     "get_results",
     {
       description:
-        "What people found on devices: for every scenario and environment × platform, each tester's result with the build or commit they tested, the app account and role they used, device, note, proof and issue link, plus a combined verdict (pass, fail, conflict = passed for some and failed for others, blocked = couldn't be checked, skip, untested). Only people mark results: a scenario without one is untested, whatever the guide says; `automated` names a test that also covers it but is not a result. By default only problems: fail, conflict, blocked, skip, and key scenarios still untested.",
+        "What people found on devices: for every scenario and environment × platform, each tester's result with the build or commit they tested, the app account and role they used, device, note, proof (text and screenshot links valid for an hour) and issue link, plus a combined verdict (pass, fail, conflict = passed for some and failed for others, blocked = couldn't be checked, skip, untested). Only people mark results: a scenario without one is untested, whatever the guide says; `automated` names a test that also covers it but is not a result. By default only problems: fail, conflict, blocked, skip, and key scenarios still untested.",
       inputSchema: {
         guideId: z.uuid(),
         version: versionNumber.optional().describe("Default: current version"),
@@ -175,7 +178,7 @@ function buildServer({ db, guideLanguage, publicUrl, notifier }: McpDeps, agent:
     ({ guideId, ...options }) =>
       run(async () => {
         const { guide, app } = await loadGuide(db, teamId, guideId);
-        return getGuideResults(db, guide, app, options);
+        return getGuideResults(db, guide, app, options, evidenceStorage ?? null);
       }),
   );
 

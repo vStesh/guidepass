@@ -16,6 +16,16 @@ export type SlackEvent = "guide_created" | "guide_updated" | "run_problems";
 export interface Me {
   user: User;
   team: { id: string; name: string; role: Role } | null;
+  /** Optional parts this instance has set up. */
+  features?: { attachments: boolean };
+}
+
+/** A screenshot attached as proof; `url` works for an hour. */
+export interface Attachment {
+  id: string;
+  contentType: string;
+  size: number;
+  url: string;
 }
 
 export interface Environment {
@@ -118,6 +128,7 @@ export interface ScenarioResult {
   note: string | null;
   evidence: string | null;
   issueUrl: string | null;
+  attachments?: Attachment[];
   updatedAt: string;
   fromVersion: number | null;
 }
@@ -162,6 +173,8 @@ export interface RunDetail {
   };
   content: GuideContent;
   results: RunResult[];
+  /** Screenshots per scenario key. */
+  attachments?: Record<string, Attachment[]>;
   counts: Counts;
 }
 
@@ -298,6 +311,14 @@ export function createApi(auth: Auth) {
       body: { status: ResultStatus | "untested"; note?: string; evidence?: string; issueUrl?: string },
     ) =>
       request<unknown>("PUT", `/runs/${runId}/results/${encodeURIComponent(scenarioKey)}`, body),
+    startAttachment: (runId: string, scenarioKey: string, contentType: string) =>
+      request<{ attachment: { id: string }; upload: { url: string; fields: Record<string, string> } }>(
+        "POST",
+        `/runs/${runId}/results/${encodeURIComponent(scenarioKey)}/attachments`,
+        { contentType },
+      ),
+    completeAttachment: (id: string) => request<{ attachment: Attachment }>("POST", `/attachments/${id}/complete`),
+    removeAttachment: (id: string) => request<unknown>("DELETE", `/attachments/${id}`),
     setRunFinished: (runId: string, finished: boolean) =>
       request<unknown>("PATCH", `/runs/${runId}`, { finished }),
 

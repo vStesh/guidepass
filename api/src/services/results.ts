@@ -10,6 +10,8 @@ import {
 } from "@guidepass/schema";
 import type { Db } from "../db/client.ts";
 import { apps, guideVersions, guides, results, runs, users } from "../db/schema.ts";
+import type { EvidenceStorage } from "../storage.ts";
+import { attachmentsOf, type AttachmentView } from "./attachments.ts";
 import { ApiError } from "../errors.ts";
 
 export type GuideRow = typeof guides.$inferSelect;
@@ -60,6 +62,8 @@ export interface ScenarioResult {
   note: string | null;
   evidence: string | null;
   issueUrl: string | null;
+  /** Screenshots attached as proof, with links valid for an hour. */
+  attachments: AttachmentView[];
   updatedAt: Date;
   /** Set when the result was recorded on an older version where this scenario was the same. */
   fromVersion: number | null;
@@ -110,6 +114,7 @@ export async function getGuideResults(
   guide: GuideRow,
   app: AppRow,
   options: ResultsFilter = {},
+  storage: EvidenceStorage | null = null,
 ): Promise<GuideResults> {
   const versionNumber = options.version ?? guide.currentVersion;
   const versions = await db
@@ -178,6 +183,11 @@ export async function getGuideResults(
     .innerJoin(runs, eq(runs.id, results.runId))
     .innerJoin(guideVersions, eq(guideVersions.id, runs.guideVersionId))
     .where(and(...runFilters));
+  const attachmentsByResult = await attachmentsOf(
+    db,
+    storage,
+    runRows.map(({ run }) => run.id),
+  );
   const resultsByRun = new Map<string, (typeof results.$inferSelect)[]>();
   for (const { result } of resultRows) {
     const list = resultsByRun.get(result.runId) ?? [];
@@ -210,6 +220,7 @@ export async function getGuideResults(
             note: result.note,
             evidence: result.evidence,
             issueUrl: result.issueUrl,
+            attachments: attachmentsByResult.get(`${run.id}/${scenario.key}`) ?? [],
             updatedAt: result.updatedAt,
             fromVersion: runVersion === versionNumber ? null : runVersion,
           });
