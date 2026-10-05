@@ -1,0 +1,54 @@
+# Runs in this instance's CodeBuild project when an owner presses Update.
+# Same steps as a person updating by hand (docs/updating.md), plus a database
+# snapshot first. TARGET_VERSION is set by the API for each run.
+version: 0.2
+
+env:
+  shell: bash
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 22
+    commands:
+      - set -euo pipefail
+      - '[[ "$TARGET_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Not a release tag: $TARGET_VERSION"; exit 1; }'
+      - '[[ "$TARGET_COMMIT" =~ ^[0-9a-f]{40}$ ]] || { echo "Not a commit: $TARGET_COMMIT"; exit 1; }'
+      # Repository, state and database come from the instance's own parameter, not the environment.
+      - aws ssm get-parameter --name "$UPDATER_PARAMETER" --with-decryption --query Parameter.Value --output text > /tmp/updater.json
+      - REPOSITORY=$(jq -r .repository /tmp/updater.json); STATE_BUCKET=$(jq -r .state_bucket /tmp/updater.json); STATE_KEY=$(jq -r .state_key /tmp/updater.json); STATE_REGION=$(jq -r .state_region /tmp/updater.json); DB_CLUSTER=$(jq -r .db_cluster /tmp/updater.json)
+      - '[[ "$REPOSITORY" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]] || { echo "Bad repository: $REPOSITORY"; exit 1; }'
+      - echo "Installing Terraform $TERRAFORM_VERSION"
+      - cd /tmp
+      - curl -fsSLO "https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip"
+      - curl -fsSLO "https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_SHA256SUMS"
+      - grep "linux_amd64.zip" "terraform_${TERRAFORM_VERSION}_SHA256SUMS" | sha256sum -c -
+      - unzip -o -q "terraform_${TERRAFORM_VERSION}_linux_amd64.zip" -d /usr/local/bin
+      - terraform version
+
+  pre_build:
+    commands:
+      - set -euo pipefail
+      - echo "Downloading $REPOSITORY $TARGET_VERSION at $TARGET_COMMIT"
+      - mkdir -p /tmp/release && cd /tmp/release
+      # The commit approved in the web app, not whatever the tag points to now.
+      - curl -fsSL "https://github.com/${REPOSITORY}/archive/${TARGET_COMMIT}.tar.gz" | tar xz --strip-components=1
+      - node -p "'Release package version: ' + require('./package.json').version"
+      - '[[ "v$(node -p "require(\"./package.json\").version")" == "$TARGET_VERSION" ]] || { echo "Tag and package.json disagree"; exit 1; }'
+      - aws ssm get-parameter --name "$SETTINGS_PARAMETER" --with-decryption --query Parameter.Value --output text > infra/instance.auto.tfvars.json
+      - SNAPSHOT="${DB_CLUSTER}-before-${TARGET_VERSION//./-}-$(date -u +%Y%m%d%H%M%S)"
+      - echo "Snapshot of the database before updating: $SNAPSHOT"
+      - aws rds create-db-cluster-snapshot --db-cluster-identifier "$DB_CLUSTER" --db-cluster-snapshot-identifier "$SNAPSHOT" --tags Key=Project,Value=guidepass Key=Purpose,Value=before-update >/dev/null
+      - aws rds wait db-cluster-snapshot-available --db-cluster-snapshot-identifier "$SNAPSHOT"
+      - echo "Snapshot ready"
+
+  build:
+    commands:
+      - set -euo pipefail
+      - cd /tmp/release
+      - npm ci --no-audit --no-fund
+      - npm run build
+      - cd infra
+      - terraform init -input=false -backend-config="bucket=$STATE_BUCKET" -backend-config="key=$STATE_KEY" -backend-config="region=$STATE_REGION" -backend-config="encrypt=true" -backend-config="use_lockfile=true"
+      - terraform apply -input=false -auto-approve -var "state_bucket=$STATE_BUCKET" -var "state_key=$STATE_KEY" -var "state_region=$STATE_REGION"
+      - echo "Updated to $TARGET_VERSION"

@@ -53,7 +53,9 @@ fi
 
 case "$command" in
   plan | apply | destroy | import | refresh | console)
-    terraform "$command" -var-file="$vars" "$@" ;;
+    # The state's location, for the Update button's updater (self_update).
+    terraform "$command" -var-file="$vars" \
+      -var "state_bucket=$(setting bucket)" -var "state_key=$(setting key)" -var "state_region=$(setting region)" "$@" ;;
   *)
     terraform "$command" "$@" ;;
 esac

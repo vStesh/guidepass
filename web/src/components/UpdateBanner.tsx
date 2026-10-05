@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router";
 import type { UpdateStatus } from "../api.ts";
 import { useI18n } from "../i18n/index.tsx";
 import { isOwner, useSession } from "../session.tsx";
@@ -49,9 +50,15 @@ export function UpdateBanner() {
         <Markdown text={latest.notes || t("update.noNotes")} />
       </details>
       <div className="row">
-        <a className="button button-primary button-small" href={UPDATING_DOCS} target="_blank" rel="noopener noreferrer">
-          {t("update.how")}
-        </a>
+        {status.canUpdate ? (
+          <Link className="button button-primary button-small" to="/settings#version">
+            {t("update.button", { version: latest.version })}
+          </Link>
+        ) : (
+          <a className="button button-primary button-small" href={UPDATING_DOCS} target="_blank" rel="noopener noreferrer">
+            {t("update.how")}
+          </a>
+        )}
         {latest.url.startsWith("https://github.com/") && (
           <a className="button button-small" href={latest.url} target="_blank" rel="noopener noreferrer">
             {t("update.release")}

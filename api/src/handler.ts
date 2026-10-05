@@ -7,6 +7,7 @@ import { createDataApiDb } from "./db/client.ts";
 import { cognitoDirectory } from "./directory.ts";
 import { createMcpHandler } from "./mcp/server.ts";
 import { s3EvidenceStorage } from "./storage.ts";
+import { codebuildUpdater } from "./updater.ts";
 
 const db = createDataApiDb({
   resourceArn: required("DB_CLUSTER_ARN"),
@@ -34,6 +35,8 @@ const api = createApp({
   // Empty when the instance was deployed with update checks off.
   updateRepository: process.env.UPDATE_REPOSITORY || null,
   evidenceStorage: evidence,
+  // The Update button, when the instance was deployed with self_update.
+  updater: process.env.UPDATE_PROJECT ? codebuildUpdater(process.env.UPDATE_PROJECT) : null,
 });
 
 const mcp = createMcpHandler({

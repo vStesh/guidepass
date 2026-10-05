@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import type { Environment } from "../api.ts";
 import { ErrorBox, Load, formatDate, slugify } from "../components/ui.tsx";
 import { UPDATING_DOCS } from "../components/UpdateBanner.tsx";
+import { UpdateRun } from "../components/UpdateRun.tsx";
 import type { UpdateStatus } from "../api.ts";
 import { useI18n } from "../i18n/index.tsx";
 import { useLoad, useSession } from "../session.tsx";
@@ -188,7 +189,7 @@ function VersionCard() {
   }, []);
 
   return (
-    <section className="card stack section-gap-sm">
+    <section id="version" className="card stack section-gap-sm">
       <h2>{t("update.title")}</h2>
       <p>{t("update.current", { version: __APP_VERSION__ })}</p>
       {status && !status.enabled && <p className="muted">{t("update.off")}</p>}
@@ -202,6 +203,7 @@ function VersionCard() {
               : t("update.noReleases")}
           </p>
           {status.checkedAt && <p className="muted small">{t("update.checked", { date: formatDate(status.checkedAt, locale) })}</p>}
+          {status.canUpdate && <UpdateRun latest={status.updateAvailable ? (status.latest?.version ?? null) : null} />}
           <div className="row">
             <button type="button" className="button button-small" disabled={checking} onClick={() => void check(true)}>
               {t("update.checkNow")}

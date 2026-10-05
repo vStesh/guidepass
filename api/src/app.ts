@@ -3,6 +3,7 @@ import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { MAX_BODY } from "./limits.ts";
 import type { EvidenceStorage } from "./storage.ts";
+import type { Updater } from "./updater.ts";
 import type { Authenticator } from "./auth.ts";
 import type { AppEnv } from "./context.ts";
 import type { Db } from "./db/client.ts";
@@ -35,6 +36,8 @@ export interface AppDeps {
   updateFetch?: typeof fetch;
   /** Where screenshots attached as proof are kept; null turns attachments off. */
   evidenceStorage?: EvidenceStorage | null;
+  /** Runs the Update button's updates; null when the instance has no updater (self_update off). */
+  updater?: Updater | null;
 }
 
 /** `uk` when the browser prefers Ukrainian, otherwise English. */
@@ -54,6 +57,7 @@ export function createApp({
   updateRepository = null,
   updateFetch,
   evidenceStorage = null,
+  updater = null,
 }: AppDeps) {
   const notifications = { db, notify: notifier, publicUrl, language: guideLanguage };
   const app = new Hono<AppEnv>();
@@ -94,7 +98,7 @@ export function createApp({
     c.set("db", db);
     c.set("ownerEmail", ownerEmail);
     c.set("directory", directory);
-    c.set("updates", { repository: updateRepository, fetch: updateFetch });
+    c.set("updates", { repository: updateRepository, fetch: updateFetch, updater });
     c.set("evidence", evidenceStorage);
     c.set("notifications", notifications);
     c.set("user", user!);

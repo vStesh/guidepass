@@ -199,6 +199,20 @@ export interface UpdateStatus {
   latest: { version: string; name: string; notes: string; url: string; publishedAt: string } | null;
   updateAvailable: boolean;
   checkedAt: string | null;
+  /** The instance can update itself from the web app (the Update button). */
+  canUpdate?: boolean;
+}
+
+/** The last update started with the Update button, with its live progress. */
+export interface UpdateRun {
+  id: string;
+  version: string;
+  from: string;
+  startedBy: string;
+  startedAt: string;
+  status?: "running" | "succeeded" | "failed" | "unknown";
+  phase?: string | null;
+  log?: string[];
 }
 
 export interface AgentToken {
@@ -258,6 +272,8 @@ export function createApi(auth: Auth) {
   return {
     me: () => request<Me>("GET", "/me"),
     updates: (refresh = false) => request<UpdateStatus>("GET", refresh ? "/updates?refresh=1" : "/updates"),
+    updateRun: () => request<{ run: UpdateRun | null }>("GET", "/updates/run"),
+    startUpdate: (version: string) => request<{ run: UpdateRun }>("POST", "/updates/run", { version }),
     updateMe: (body: { name?: string; locale?: Locale }) => request<{ user: User }>("PATCH", "/me", body),
     setup: (teamName: string) => request<{ team: Me["team"] }>("POST", "/setup", { teamName }),
     environments: () => request<{ environments: Environment[] }>("GET", "/environments"),

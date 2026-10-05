@@ -111,6 +111,41 @@ variable "update_repository" {
   }
 }
 
+variable "self_update" {
+  description = "Add the Update button: owners can deploy a newer release from the web app (a CodeBuild project in this account snapshots the database and runs terraform apply). Needs the Terraform state in S3 (tf.sh passes it)."
+  type        = bool
+  default     = false
+}
+
+variable "state_bucket" {
+  description = "S3 bucket of this instance's Terraform state. Set by tf.sh from the backend file; the updater uses the same state."
+  type        = string
+  default     = ""
+}
+
+variable "state_key" {
+  description = "Key of this instance's Terraform state in state_bucket. Set by tf.sh."
+  type        = string
+  default     = ""
+}
+
+variable "state_region" {
+  description = "Region of state_bucket. Set by tf.sh."
+  type        = string
+  default     = ""
+}
+
+variable "updater_terraform_version" {
+  description = "Terraform version the updater installs (checked against HashiCorp's SHA256SUMS)."
+  type        = string
+  default     = "1.16.0"
+
+  validation {
+    condition     = can(regex("^[0-9]+\\.[0-9]+\\.[0-9]+$", var.updater_terraform_version))
+    error_message = "updater_terraform_version must look like 1.16.0."
+  }
+}
+
 variable "deletion_protection" {
   description = "Protect the database from deletion. Turn off only to tear an instance down."
   type        = bool

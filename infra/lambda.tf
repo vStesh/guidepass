@@ -54,6 +54,65 @@ data "aws_iam_policy_document" "lambda" {
     resources = ["${aws_s3_bucket.evidence.arn}/evidence/*"]
   }
 
+  # The Update button: start the updater and show its progress.
+  dynamic "statement" {
+    for_each = local.self_update ? [1] : []
+    content {
+      sid       = "StartUpdate"
+      actions   = ["codebuild:StartBuild", "codebuild:BatchGetBuilds"]
+      resources = [aws_codebuild_project.update[0].arn]
+    }
+  }
+
+  # A run may only set the release and its commit: no other buildspec, source,
+  # image, role or environment variable, even if this function were misused.
+  dynamic "statement" {
+    for_each = local.self_update ? [1] : []
+    content {
+      sid       = "OnlyReleaseOverrides"
+      effect    = "Deny"
+      actions   = ["codebuild:StartBuild"]
+      resources = [aws_codebuild_project.update[0].arn]
+      condition {
+        test     = "ForAnyValue:StringNotEquals"
+        variable = "codebuild:environment.environmentVariables.name"
+        values   = ["TARGET_VERSION", "TARGET_COMMIT"]
+      }
+    }
+  }
+
+  dynamic "statement" {
+    for_each = local.self_update ? toset([
+      "codebuild:source.buildspec",
+      "codebuild:source.location",
+      "codebuild:source.type",
+      "codebuild:environment.image",
+      "codebuild:environment.type",
+      "codebuild:environment.computeType",
+      "codebuild:serviceRole",
+    ]) : toset([])
+    content {
+      sid       = "NoOverride${replace(title(replace(replace(statement.value, "codebuild:", ""), ".", " ")), " ", "")}"
+      effect    = "Deny"
+      actions   = ["codebuild:StartBuild"]
+      resources = [aws_codebuild_project.update[0].arn]
+      condition {
+        test     = "Null"
+        variable = statement.value
+        values   = ["false"]
+      }
+    }
+  }
+
+  dynamic "statement" {
+    for_each = local.self_update ? [1] : []
+    content {
+      sid       = "UpdateLog"
+      actions   = ["logs:GetLogEvents"]
+      resources = ["${aws_cloudwatch_log_group.update[0].arn}:*"]
+    }
+  }
+
   # Only for a pool Guidepass owns: invitations create accounts there.
   dynamic "statement" {
     for_each = local.create_pool ? [1] : []
@@ -123,6 +182,7 @@ resource "aws_lambda_function" "api" {
       PUBLIC_URL           = local.public_url
       UPDATE_REPOSITORY    = var.update_repository
       EVIDENCE_BUCKET      = aws_s3_bucket.evidence.id
+      UPDATE_PROJECT       = local.self_update ? local.update_project : ""
     })
   }
 
