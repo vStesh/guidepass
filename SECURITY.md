@@ -22,3 +22,4 @@ Out of scope: your AWS account's own configuration, Cognito user pools Guidepass
 - **Proof on results** is visible to the whole team and to agents. Guidepass refuses text that looks like a token or key, but it can't catch everything: share sanitized requests only, and crop screenshots that show other people's data. Screenshots live in a private bucket and are only reachable through links that expire in an hour.
 - **Slack webhooks** are visible to owners only; treat them as secrets.
 - Deploy with the least-privilege policy in `infra/deploy-policy.json` rather than administrator credentials.
+- **The Update button** (`self_update`) gives a CodeBuild project the same permissions as the deploy policy. Only owners can start it, and only for the newest `vX.Y.Z` release of `update_repository`; point that at a repository you trust (a fork you control, or the upstream one).

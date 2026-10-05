@@ -11,6 +11,11 @@ export interface Release {
   notes: string;
   url: string;
   publishedAt: string;
+  /**
+   * The commit the release tag pointed to when it was checked. The updater deploys
+   * exactly this commit, so moving the tag later can't change what was approved.
+   */
+  commit?: string | null;
 }
 
 export interface UpdateStatus {
@@ -20,6 +25,8 @@ export interface UpdateStatus {
   latest: Release | null;
   updateAvailable: boolean;
   checkedAt: string | null;
+  /** The instance can update itself (the Update button). */
+  canUpdate: boolean;
 }
 
 export interface UpdateCheckOptions {
@@ -28,6 +35,8 @@ export interface UpdateCheckOptions {
   fetch?: typeof fetch;
   /** Ask GitHub now instead of using the result from the last day. */
   refresh?: boolean;
+  /** Whether an updater is configured. */
+  canUpdate?: boolean;
 }
 
 const KEY = "latest_release";
@@ -45,7 +54,7 @@ interface Cached {
  */
 export async function getUpdateStatus(db: Db, options: UpdateCheckOptions): Promise<UpdateStatus> {
   if (!options.repository) {
-    return { current: VERSION, enabled: false, latest: null, updateAvailable: false, checkedAt: null };
+    return { current: VERSION, enabled: false, latest: null, updateAvailable: false, checkedAt: null, canUpdate: false };
   }
   const [row] = await db.select().from(instanceState).where(eq(instanceState.key, KEY));
   let cached = row?.value as Cached | undefined;
@@ -69,7 +78,31 @@ export async function getUpdateStatus(db: Db, options: UpdateCheckOptions): Prom
     latest,
     updateAvailable: !!latest && compareVersions(latest.version, VERSION) > 0,
     checkedAt: cached?.checkedAt ?? null,
+    canUpdate: !!options.canUpdate,
   };
+}
+
+const github = (path: string, fetchImpl: typeof fetch) =>
+  fetchImpl(`https://api.github.com/${path}`, {
+    headers: { accept: "application/vnd.github+json", "user-agent": "guidepass-update-check" },
+    redirect: "follow",
+    signal: AbortSignal.timeout(3000),
+  });
+
+/** The commit a tag points to (following an annotated tag), or null if GitHub doesn't say. */
+async function tagCommit(repository: string, tag: string, fetchImpl: typeof fetch): Promise<string | null> {
+  try {
+    let ref = (await (await github(`repos/${repository}/git/ref/tags/${encodeURIComponent(tag)}`, fetchImpl)).json()) as {
+      object?: { type?: string; sha?: string };
+    };
+    if (ref.object?.type === "tag" && ref.object.sha) {
+      ref = (await (await github(`repos/${repository}/git/tags/${ref.object.sha}`, fetchImpl)).json()) as typeof ref;
+    }
+    const sha = ref.object?.type === "commit" ? ref.object.sha : undefined;
+    return sha && /^[0-9a-f]{40}$/.test(sha) ? sha : null;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -95,7 +128,9 @@ async function fetchLatestRelease(repository: string, fetchImpl: typeof fetch): 
       published_at?: string | null;
     };
     if (!body.tag_name || !body.html_url) return null;
+    const commit = await tagCommit(repository, body.tag_name, fetchImpl);
     return {
+      commit,
       version: body.tag_name.replace(/^v/, ""),
       name: body.name || body.tag_name,
       // A very long release body would bloat every owner's page; the link has the rest.

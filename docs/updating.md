@@ -4,7 +4,21 @@ Guidepass is released as versions on GitHub (`vX.Y.Z`). Each instance knows its 
 
 To turn the check off, or to follow a fork, set `update_repository` in the instance's `.tfvars` (empty turns it off).
 
-## Update
+## Update with the button
+
+Instances deployed with `self_update = true` have an **Update to X** button for owners (in the banner and under **Settings → Version**). After a confirmation, a CodeBuild project in your AWS account:
+
+1. downloads the release from GitHub (only a `vX.Y.Z` tag of `update_repository`, and only the newest release, newer than the running version) and installs a pinned Terraform version, checked against HashiCorp's checksums;
+2. takes a snapshot of the database (`<name_prefix>-db-before-vX-Y-Z-<time>`, kept until you delete it);
+3. builds the release and runs `terraform apply` with this instance's settings (saved by every apply in SSM, `/<name_prefix>/terraform-variables`) and its state in S3.
+
+The page shows the step and the log, and offers to reload when the new version is live (about 5–10 minutes). One update runs at a time. If it fails, nothing is lost: the instance keeps running where the apply stopped, the snapshot is there, and you can finish by hand as below.
+
+A release that changes `infra/deploy-policy.json` may need one update by hand (below): the updater runs with the permissions it had before the update, so new kinds of resources can be refused. Release notes say when.
+
+To turn the button on, set `self_update = true` in the instance's `.tfvars` and apply once by hand; your deploy credentials need the current [`infra/deploy-policy.json`](../infra/deploy-policy.json) (it includes CodeBuild and SSM). The updater gets the same permissions as the deploy policy, so it is as powerful as your deploy credentials: only owners can start it, and only for the newest release of the repository you chose.
+
+## Update by hand
 
 From the machine you deploy from, in the Guidepass checkout:
 
@@ -33,4 +47,4 @@ cd infra && AWS_PROFILE=<profile> ./tf.sh <instance> apply
 
 ## Coming later
 
-An *Update* button that runs this for the owner in their own AWS account (with a database snapshot first), and optional automatic patch updates, off by default.
+Optional automatic patch updates (`0.3.1 → 0.3.2`) with the same updater, off by default.

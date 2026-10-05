@@ -278,3 +278,8 @@ a.list-item:hover { border-color: var(--line-strong); box-shadow: var(--shadow);
 label.button { display: inline-flex; align-items: center; width: fit-content; }
 label.button.is-busy { opacity: 0.7; pointer-events: none; }
 
+.update-run { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border-radius: 8px; background: var(--surface-2); }
+.update-run-succeeded { background: var(--pass-bg); }
+.update-run-failed { background: var(--fail-bg); }
+.update-log { max-height: 40vh; overflow: auto; font-size: 0.8rem; white-space: pre-wrap; word-break: break-word; margin: 0.5rem 0 0; }
+

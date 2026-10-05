@@ -114,7 +114,10 @@
       "Resource": "arn:aws:iam::*:role/gp-*",
       "Condition": {
         "StringEquals": {
-          "iam:PassedToService": "lambda.amazonaws.com"
+          "iam:PassedToService": [
+            "lambda.amazonaws.com",
+            "codebuild.amazonaws.com"
+          ]
         }
       }
     },
@@ -153,7 +156,10 @@
         "logs:ListTagsForResource",
         "logs:ListTagsLogGroup"
       ],
-      "Resource": "arn:aws:logs:*:*:log-group:/aws/lambda/gp-*"
+      "Resource": [
+        "arn:aws:logs:*:*:log-group:/aws/lambda/gp-*",
+        "arn:aws:logs:*:*:log-group:/aws/codebuild/gp-*"
+      ]
     },
     {
       "Sid": "LogsDescribe",
@@ -218,6 +224,39 @@
       "Effect": "Allow",
       "Action": [
         "cognito-idp:*"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "Updater",
+      "Effect": "Allow",
+      "Action": [
+        "codebuild:CreateProject",
+        "codebuild:UpdateProject",
+        "codebuild:DeleteProject",
+        "codebuild:BatchGetProjects"
+      ],
+      "Resource": "arn:aws:codebuild:*:*:project/gp-*"
+    },
+    {
+      "Sid": "UpdaterSettings",
+      "Effect": "Allow",
+      "Action": [
+        "ssm:PutParameter",
+        "ssm:GetParameter",
+        "ssm:GetParameters",
+        "ssm:DeleteParameter",
+        "ssm:AddTagsToResource",
+        "ssm:RemoveTagsFromResource",
+        "ssm:ListTagsForResource"
+      ],
+      "Resource": "arn:aws:ssm:*:*:parameter/gp-*"
+    },
+    {
+      "Sid": "UpdaterSettingsDescribe",
+      "Effect": "Allow",
+      "Action": [
+        "ssm:DescribeParameters"
       ],
       "Resource": "*"
     }
