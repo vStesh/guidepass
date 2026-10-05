@@ -8,13 +8,15 @@ import { createLocalDb } from "./db/local.ts";
 import { localEvidenceStorage } from "./local-storage.ts";
 import { createMcpHandler } from "./mcp/server.ts";
 
-// Local development server: data in api/.data, sign in by sending `x-local-user: you@example.com`.
-const db = await createLocalDb(new URL("../.data", import.meta.url).pathname);
+// Local development server: data in api/.data (or GUIDEPASS_DATA_DIR, e.g. a fresh
+// folder for browser tests), sign in by sending `x-local-user: you@example.com`.
+const dataDir = process.env.GUIDEPASS_DATA_DIR || new URL("../.data", import.meta.url).pathname;
+const db = await createLocalDb(dataDir);
 await seedEnvironments(db, defaultEnvironments);
 
 const port = Number(process.env.PORT ?? 8787);
 // Screenshots go to api/.data/evidence, served by this server.
-const evidence = localEvidenceStorage(new URL("../.data/evidence", import.meta.url).pathname);
+const evidence = localEvidenceStorage(`${dataDir}/evidence`);
 const mcp = createMcpHandler({
   db,
   guideLanguage: process.env.GUIDE_LANGUAGE ?? "en",

@@ -25,3 +25,7 @@ crash.log
 # Terraform build output
 infra/.build/
 *.tfplan
+
+# Browser tests
+test-results/
+playwright-report/

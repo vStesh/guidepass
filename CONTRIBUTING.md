@@ -26,7 +26,10 @@ Before opening a pull request:
 npm run typecheck
 npm test
 npx oxlint .
+npm run test:e2e      # browser tests; first time: npx playwright install chromium
 ```
+
+`npm run test:e2e` starts the local API with a fresh database and the web app on their own ports (8797, 5180), then walks through the main flows in Chromium on a desktop and a phone screen: setting up a team, uploading a guide, running it with a screenshot as proof, reading the results. Add a scenario there when you change one of those flows.
 
 CI runs the same checks, plus `terraform fmt -check` and `terraform validate`, and checks that the database migrations match the schema.
 

@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+- Browser tests (Playwright) in CI: the web app against the local API with a fresh database, on a desktop and a phone screen — team setup, naming yourself, uploading a guide with the dry-run check, a tester's run with a screenshot as proof of a fail, the owner reading the result. `npm run test:e2e`. The local API takes `GUIDEPASS_DATA_DIR` and the web dev server `GUIDEPASS_API`.
+
 ## [0.2.0] - 2026-10-05
 
 **Updating from 0.1.0:** check out `v0.2.0` and run `./tf.sh <instance> apply` as usual. Terraform adds a private S3 bucket for screenshots and lets the API Lambda use it; the deploy policy already covers it (`gp-*` buckets). Reload Guidepass in open browser tabs afterwards.

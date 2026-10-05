@@ -39,6 +39,31 @@ jobs:
           fi
       - run: npm run build
 
+  e2e:
+    name: Browser tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      # The web app against the local API with a fresh database, on a desktop and a phone screen.
+      - run: npm run test:e2e
+      - name: Keep the report when something fails
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+
   infra:
     name: Terraform format and validate
     runs-on: ubuntu-latest
