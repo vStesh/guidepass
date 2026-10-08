@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-08
+
+**Updating from 0.2.0:** update by hand this time (`./tf.sh <instance> apply`). The deploy policy changed: first update your deploy credentials to the new `infra/deploy-policy.json` (CodeBuild, SSM, passing a role to CodeBuild). To get the Update button, set `self_update = true` in the instance's `.tfvars` before applying; from then on, later versions can be installed with the button.
+
 ### Added
 - The **Update** button (opt-in, `self_update = true`): owners update the instance to the newest release from the web app. A CodeBuild project in the instance's account downloads the release tag, snapshots the database, builds it and runs `terraform apply` with the instance's own settings (saved to SSM by every apply) and state; the page shows the step and the log. One update at a time, only to the newest release, owners only. `tf.sh` now passes the state location; the deploy policy adds CodeBuild and SSM. Locally, `GUIDEPASS_DEMO_UPDATER=1` shows the button with a pretend update.
 - Browser tests (Playwright) in CI: the web app against the local API with a fresh database, on a desktop and a phone screen — team setup, naming yourself, uploading a guide with the dry-run check, a tester's run with a screenshot as proof of a fail, the owner reading the result. `npm run test:e2e`. The local API takes `GUIDEPASS_DATA_DIR` and the web dev server `GUIDEPASS_API`.
