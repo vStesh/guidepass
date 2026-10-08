@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-10-08
+
+**Updating from 0.3.0:** with the Update button, or `./tf.sh <instance> apply` by hand. Nothing else to do.
+
+### Changed
+- Dependencies updated (minor and patch): AWS SDK clients, MCP SDK 1.32, Hono 4.13.13, Vitest, Node types.
+
 ## [0.3.0] - 2026-10-08
 
 **Updating from 0.2.0:** update by hand this time (`./tf.sh <instance> apply`). The deploy policy changed: first update your deploy credentials to the new `infra/deploy-policy.json` (CodeBuild, SSM, passing a role to CodeBuild). To get the Update button, set `self_update = true` in the instance's `.tfvars` before applying; from then on, later versions can be installed with the button.
