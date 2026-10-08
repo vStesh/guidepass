@@ -1,7 +1,7 @@
 {
   "name": "guidepass",
   "private": true,
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Manual testing guides written by AI agents, run by people on their devices, read back through MCP.",
   "license": "MIT",
   "repository": {
