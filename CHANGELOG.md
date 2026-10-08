@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-10-08
+
+**Updating from 0.3.0 or 0.3.1:** the Update button in these versions can't start (its build script didn't parse), so update by hand once: `./tf.sh <instance> apply`. From 0.3.2 on, the button works.
+
+### Fixed
+- The updater's build script was invalid YAML (an unquoted `: ` in two commands), so the Update button failed before doing anything. A test now parses the script and checks it with `bash -n` on every pull request.
+- After a failed update, the page no longer claims a database snapshot was taken when the update stopped before that step.
+
 ## [0.3.1] - 2026-10-08
 
 **Updating from 0.3.0:** with the Update button, or `./tf.sh <instance> apply` by hand. Nothing else to do.
