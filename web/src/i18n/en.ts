@@ -234,7 +234,7 @@ export const en = {
   "update.running": "Updating to {version}: {phase}…",
   "update.succeeded": "Updated to {version}.",
   "update.failed": "Updating to {version} didn't finish.",
-  "update.failedHint": "Nothing was lost: the instance keeps running the previous version where the update stopped, and a database snapshot was taken first. See the log, or update by hand (How to update).",
+  "update.failedHint": "The log shows the step where it stopped; nothing after that step ran. The database snapshot is taken before anything is deployed, so if the update stopped later, the snapshot is there. You can try again, or update by hand (How to update).",
   "update.unknown": "The update to {version} was started; its progress isn't available right now.",
   "update.startedBy": "Started by {name}, {date}",
   "update.reload": "Reload the page",

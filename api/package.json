@@ -1,6 +1,6 @@
 {
   "name": "@guidepass/api",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "private": true,
   "type": "module",
   "scripts": {
@@ -32,6 +32,7 @@
     "@types/aws-lambda": "^8.10.164",
     "drizzle-kit": "^0.31.11",
     "esbuild": "^0.28.2",
-    "tsx": "^4.23.15"
+    "tsx": "^4.23.15",
+    "yaml": "^2.9.1"
   }
 }

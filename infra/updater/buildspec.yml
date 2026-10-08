@@ -1,6 +1,7 @@
 # Runs in this instance's CodeBuild project when an owner presses Update.
 # Same steps as a person updating by hand (docs/updating.md), plus a database
-# snapshot first. TARGET_VERSION is set by the API for each run.
+# snapshot first. TARGET_VERSION and TARGET_COMMIT are set by the API for each run.
+# Commands with ": " must be quoted, or YAML reads them as keys (a test parses this file).
 version: 0.2
 
 env:
@@ -29,15 +30,15 @@ phases:
   pre_build:
     commands:
       - set -euo pipefail
-      - echo "Downloading $REPOSITORY $TARGET_VERSION at $TARGET_COMMIT"
+      - 'echo "Downloading $REPOSITORY $TARGET_VERSION at $TARGET_COMMIT"'
       - mkdir -p /tmp/release && cd /tmp/release
       # The commit approved in the web app, not whatever the tag points to now.
       - curl -fsSL "https://github.com/${REPOSITORY}/archive/${TARGET_COMMIT}.tar.gz" | tar xz --strip-components=1
-      - node -p "'Release package version: ' + require('./package.json').version"
+      - 'node -p "\"Release package version \" + require(\"./package.json\").version"'
       - '[[ "v$(node -p "require(\"./package.json\").version")" == "$TARGET_VERSION" ]] || { echo "Tag and package.json disagree"; exit 1; }'
       - aws ssm get-parameter --name "$SETTINGS_PARAMETER" --with-decryption --query Parameter.Value --output text > infra/instance.auto.tfvars.json
       - SNAPSHOT="${DB_CLUSTER}-before-${TARGET_VERSION//./-}-$(date -u +%Y%m%d%H%M%S)"
-      - echo "Snapshot of the database before updating: $SNAPSHOT"
+      - 'echo "Snapshot of the database before updating: $SNAPSHOT"'
       - aws rds create-db-cluster-snapshot --db-cluster-identifier "$DB_CLUSTER" --db-cluster-snapshot-identifier "$SNAPSHOT" --tags Key=Project,Value=guidepass Key=Purpose,Value=before-update >/dev/null
       - aws rds wait db-cluster-snapshot-available --db-cluster-snapshot-identifier "$SNAPSHOT"
       - echo "Snapshot ready"
