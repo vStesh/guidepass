@@ -11,6 +11,9 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
+# Terraform binary; set TF_BIN=tofu to use OpenTofu (>= 1.10 for S3 lockfile locking).
+tf="${TF_BIN:-terraform}"
+
 instance="${1:?usage: ./tf.sh <instance> <terraform command…>}"
 shift
 backend="backends/${instance}.s3.tfbackend"
@@ -27,8 +30,13 @@ if [[ "${1:-}" == "bootstrap" ]]; then
   if aws s3api head-bucket --bucket "$bucket" 2>/dev/null; then
     echo "Bucket $bucket already exists."
   else
-    aws s3api create-bucket --bucket "$bucket" --region "$region" \
-      --create-bucket-configuration "LocationConstraint=$region" >/dev/null
+    # us-east-1 is the default location and rejects an explicit LocationConstraint.
+    if [[ "$region" == "us-east-1" ]]; then
+      aws s3api create-bucket --bucket "$bucket" --region "$region" >/dev/null
+    else
+      aws s3api create-bucket --bucket "$bucket" --region "$region" \
+        --create-bucket-configuration "LocationConstraint=$region" >/dev/null
+    fi
     echo "Created $bucket."
   fi
   aws s3api put-public-access-block --bucket "$bucket" --public-access-block-configuration \
@@ -41,7 +49,7 @@ if [[ "${1:-}" == "bootstrap" ]]; then
 fi
 
 # Point Terraform at this instance's state (quietly; -reconfigure switches instances).
-terraform init -reconfigure -input=false -backend-config="$backend" >/dev/null
+"$tf" init -reconfigure -input=false -backend-config="$backend" >/dev/null
 
 command="${1:-plan}"
 shift || true
@@ -54,8 +62,8 @@ fi
 case "$command" in
   plan | apply | destroy | import | refresh | console)
     # The state's location, for the Update button's updater (self_update).
-    terraform "$command" -var-file="$vars" \
+    "$tf" "$command" -var-file="$vars" \
       -var "state_bucket=$(setting bucket)" -var "state_key=$(setting key)" -var "state_region=$(setting region)" "$@" ;;
   *)
-    terraform "$command" "$@" ;;
+    "$tf" "$command" "$@" ;;
 esac
