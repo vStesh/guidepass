@@ -1,5 +1,5 @@
 import { appliesTo, looksLikeSecret, needsEvidence } from "@guidepass/schema";
-import { and, eq, isNotNull, isNull } from "drizzle-orm";
+import { and, desc, eq, gt, isNotNull, isNull } from "drizzle-orm";
 import { Hono } from "hono";
 import { z } from "zod";
 import { requireMembership, type AppEnv } from "../context.ts";
@@ -16,6 +16,9 @@ export const runRoutes = new Hono<AppEnv>();
 const guideParam = validate("param", z.object({ guideId: z.uuid() }));
 const runParam = validate("param", z.object({ runId: z.uuid() }));
 const platform = z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/).max(30);
+
+/** Identical start requests within this window return the run already started instead of a new one. */
+export const DUPLICATE_RUN_WINDOW_MS = 10 * 60 * 1000;
 
 /** Start testing the current version of a guide in one environment, on one platform and device. */
 runRoutes.post(
@@ -53,6 +56,32 @@ runRoutes.post(
       .select({ id: guideVersions.id })
       .from(guideVersions)
       .where(and(eq(guideVersions.guideId, guide.id), eq(guideVersions.version, guide.currentVersion)));
+    // A double tap or a retried request must not start a second, identical run: reuse the
+    // tester's unfinished run with the same settings if it was started a moment ago.
+    const build = body.build || null;
+    const commit = body.commit || null;
+    const account = body.account || null;
+    const [existing] = await c.var.db
+      .select()
+      .from(runs)
+      .where(
+        and(
+          eq(runs.guideVersionId, version!.id),
+          eq(runs.testerId, c.var.user.id),
+          eq(runs.environmentKey, body.environment),
+          eq(runs.platform, body.platform),
+          eq(runs.device, body.device),
+          build === null ? isNull(runs.build) : eq(runs.build, build),
+          commit === null ? isNull(runs.commit) : eq(runs.commit, commit),
+          account === null ? isNull(runs.account) : eq(runs.account, account),
+          isNull(runs.finishedAt),
+          gt(runs.startedAt, new Date(Date.now() - DUPLICATE_RUN_WINDOW_MS)),
+        ),
+      )
+      .orderBy(desc(runs.startedAt))
+      .limit(1);
+    if (existing) return c.json({ run: { ...existing, version: guide.currentVersion }, reused: true }, 200);
+
     const [run] = await c.var.db
       .insert(runs)
       .values({

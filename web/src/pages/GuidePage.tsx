@@ -154,13 +154,18 @@ function StartRun({
     }
   });
   const [error, setError] = useState<unknown>(null);
+  const [starting, setStarting] = useState(false);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
+    // Ignore repeated taps / Enter presses while the first request is still in flight.
+    if (starting) return;
     setError(null);
+    setStarting(true);
     try {
       if (!build.trim() && !commit.trim()) {
         setError(new Error(t("run.buildOrCommit")));
+        setStarting(false);
         return;
       }
       const { run } = await api.startRun(guideId, { environment, platform, device, build, commit, account });
@@ -173,6 +178,7 @@ function StartRun({
       navigate(`/runs/${run.id}`);
     } catch (err) {
       setError(err);
+      setStarting(false);
     }
   }
 
@@ -227,7 +233,7 @@ function StartRun({
       </div>
       <p className="muted small">{t("run.buildOrCommit")}</p>
       {error ? <ErrorBox error={error} /> : null}
-      <button type="submit" className="button button-primary">
+      <button type="submit" className="button button-primary" disabled={starting} aria-busy={starting}>
         {t("guide.start")}
       </button>
     </form>

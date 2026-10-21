@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.3.3] - 2026-10-21
+
+**Updating from 0.3.2:** with the Update button, or `./tf.sh <instance> apply` by hand. Nothing else to do.
+
+### Fixed
+- Tapping **Start testing** more than once (or pressing Enter while the request was in flight) created several identical runs. The button is now disabled while the run starts, and the API returns the tester's unfinished run with the same guide version, environment, platform, device, build, commit and account if it was started in the last 10 minutes, instead of creating another one.
+- `infra/tf.sh bootstrap` failed in `us-east-1` (S3 rejects an explicit `LocationConstraint` there).
+
+### Added
+- `TF_BIN` for `infra/tf.sh`, so an instance can be managed with OpenTofu (`TF_BIN=tofu`, 1.10+ for S3 lockfile locking) instead of `terraform`.
+
 ## [0.3.2] - 2026-10-08
 
 **Updating from 0.3.0 or 0.3.1:** the Update button in these versions can't start (its build script didn't parse), so update by hand once: `./tf.sh <instance> apply`. From 0.3.2 on, the button works.

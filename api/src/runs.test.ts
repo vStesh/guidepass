@@ -260,3 +260,31 @@ describe("build, account and proof", () => {
     expect(cell((await call("GET", `/guides/${guideId}/results?filter=all`, anna)).body).verdict).toBe("pass");
   });
 });
+
+describe("duplicate start requests", () => {
+  it("return the run already started instead of creating another", async () => {
+    const body = { environment: "dev", platform: "ios", device: "iPhone 15 Pro", build: "6" };
+    const first = await call("POST", `/guides/${guideId}/runs`, anna, body);
+    expect(first.status).toBe(201);
+    const again = await Promise.all([1, 2, 3].map(() => call("POST", `/guides/${guideId}/runs`, anna, body)));
+    for (const r of again) {
+      expect(r.status).toBe(200);
+      expect(r.body.run.id).toBe(first.body.run.id);
+      expect(r.body.reused).toBe(true);
+    }
+  });
+
+  it("still start a new run for another device, build or after the first is finished", async () => {
+    const base = { environment: "dev", platform: "ios", device: "iPhone 15 Pro", build: "6" };
+    const a = (await call("POST", `/guides/${guideId}/runs`, anna, base)).body.run.id;
+    const otherDevice = await call("POST", `/guides/${guideId}/runs`, anna, { ...base, device: "iPhone 12" });
+    expect(otherDevice.status).toBe(201);
+    expect(otherDevice.body.run.id).not.toBe(a);
+    const otherBuild = await call("POST", `/guides/${guideId}/runs`, anna, { ...base, build: "7" });
+    expect(otherBuild.status).toBe(201);
+    await call("PATCH", `/runs/${a}`, anna, { finished: true });
+    const afterFinish = await call("POST", `/guides/${guideId}/runs`, anna, base);
+    expect(afterFinish.status).toBe(201);
+    expect(afterFinish.body.run.id).not.toBe(a);
+  });
+});
