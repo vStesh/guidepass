@@ -39,13 +39,28 @@ test("the owner sets up the team, names themselves and uploads a guide", async (
   await ok(await (await apiAs(owner)).post("invitations", { data: { email: tester, name: "Taras", role: "tester" } }));
 });
 
-test("a tester runs the guide on a phone, with a screenshot as proof of a fail @phone", async ({ page }) => {
+test("a tester runs the guide on a phone, with a screenshot as proof of a fail @phone", async ({ page }, testInfo) => {
   await signIn(page, tester);
   await expect(page.getByRole("link", { name: "Settings" })).toHaveCount(0);
-  await page.getByRole("link", { name: /Build 179/ }).click();
 
-  await page.getByLabel("Platform").selectOption("android");
-  await page.getByLabel("Device").fill("Pixel 7");
+  // The tester saves their phone once in the profile (one per project: they share the instance)...
+  const deviceName = `Test Pixel (${testInfo.project.name})`;
+  await page.goto("/profile");
+  const devices = page.locator("#devices");
+  await devices.getByLabel("Name").fill(deviceName);
+  await devices.getByLabel("Platform").selectOption("android");
+  await devices.getByLabel("Model").fill("Pixel 7");
+  await devices.getByLabel("OS version").fill("Android 15");
+  await devices.getByRole("button", { name: "Add device" }).click();
+  await expect(devices.locator(".list-item").filter({ hasText: deviceName })).toContainText("Pixel 7 · Android 15");
+
+  // ...and picks it with one tap when starting a run.
+  await page.goto("/");
+  await page.getByRole("link", { name: /Build 179/ }).click();
+  await page.getByRole("button", { name: deviceName }).click();
+  await expect(page.getByLabel("Platform")).toHaveValue("android");
+  await expect(page.getByLabel("Device")).toHaveValue("Pixel 7 · Android 15");
+  await expect(page.getByRole("button", { name: deviceName })).toHaveAttribute("aria-pressed", "true");
   await page.getByLabel("Build tested").fill("181");
   await page.getByRole("button", { name: "Start", exact: true }).click();
   await expect(page).toHaveURL(/\/runs\//);

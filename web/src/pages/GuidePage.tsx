@@ -1,7 +1,8 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
 import type { GuideContent, Platform, Scenario } from "@guidepass/schema/core";
-import type { App, Attachment, Counts, Environment, GuideDetail, GuideResults } from "../api.ts";
+import type { App, Attachment, Counts, Environment, GuideDetail, GuideResults, SavedDevice } from "../api.ts";
+import { deviceDescription } from "../components/Devices.tsx";
 import { ScreenshotList } from "../components/Screenshots.tsx";
 import { Chip, ErrorBox, Load, Markdown, ProgressBar, TypeBadge, VerdictBadge, authorLabel, formatDate, platformLabel } from "../components/ui.tsx";
 import { useI18n } from "../i18n/index.tsx";
@@ -155,6 +156,24 @@ function StartRun({
   });
   const [error, setError] = useState<unknown>(null);
   const [starting, setStarting] = useState(false);
+  const [saved, setSaved] = useState<SavedDevice[] | null>(null);
+
+  useEffect(() => {
+    // Only a shortcut: without it the fields are filled in by hand.
+    api.devices().then(({ devices }) => setSaved(devices), () => setSaved([]));
+  }, [api]);
+
+  // Devices for platforms this app has; picking one fills in the platform and the device.
+  const usable = saved?.filter((d) => app.platforms.includes(d.platform)) ?? [];
+  // Two saved devices can describe the same phone: prefer the one tapped.
+  const [pickedId, setPickedId] = useState<string | null>(null);
+  const matches = (d: SavedDevice) => d.platform === platform && deviceDescription(d) === device.trim();
+  const picked = usable.find((d) => d.id === pickedId && matches(d))?.id ?? usable.find(matches)?.id;
+  function pick(d: SavedDevice) {
+    setPickedId(d.id);
+    setPlatform(d.platform);
+    setDevice(deviceDescription(d));
+  }
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -185,6 +204,35 @@ function StartRun({
   return (
     <form className="card start-run" onSubmit={submit}>
       <h2>{t("guide.startRun")}</h2>
+      {/* Hidden while loading, and when none of the saved devices fits this app's platforms. */}
+      {saved && (usable.length > 0 || saved.length === 0) && (
+        <div className="field">
+          <span>{t("run.savedDevices")}</span>
+          {usable.length ? (
+            <div className="row device-picker">
+              {usable.map((d) => (
+                <button
+                  key={d.id}
+                  type="button"
+                  className="button button-small"
+                  aria-pressed={d.id === picked}
+                  title={`${platformLabel(t, d.platform, app.platformNames)} · ${deviceDescription(d)}`}
+                  onClick={() => pick(d)}
+                >
+                  {d.name}
+                </button>
+              ))}
+              <Link to="/profile" className="small">
+                {t("run.manageDevices")}
+              </Link>
+            </div>
+          ) : (
+            <p className="muted small">
+              {t("run.noSavedDevices")} <Link to="/profile">{t("run.manageDevices")}</Link>
+            </p>
+          )}
+        </div>
+      )}
       <div className="grid-3">
         <label className="field">
           <span>{t("guide.environment")}</span>
@@ -208,7 +256,7 @@ function StartRun({
         </label>
         <label className="field">
           <span>{t("guide.device")}</span>
-          <input required maxLength={100} placeholder={t("guide.deviceHint")} value={device} onChange={(e) => setDevice(e.target.value)} />
+          <input required maxLength={200} placeholder={t("guide.deviceHint")} value={device} onChange={(e) => setDevice(e.target.value)} />
         </label>
         <label className="field">
           <span>{t("run.build")}</span>

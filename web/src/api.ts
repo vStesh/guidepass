@@ -34,6 +34,18 @@ export interface Environment {
   archived: boolean;
 }
 
+/** A member's saved test device; see `deviceDescription`. */
+export interface SavedDevice {
+  id: string;
+  name: string;
+  platform: Platform;
+  model: string;
+  os: string | null;
+  details: string | null;
+}
+
+export type DeviceFields = { name: string; platform: Platform; model: string; os?: string; details?: string };
+
 export interface Area {
   id: string;
   slug: string;
@@ -350,6 +362,12 @@ export function createApi(auth: Auth) {
         role,
       }),
     revokeInvitation: (id: string) => request<unknown>("DELETE", `/invitations/${id}`),
+
+    devices: () => request<{ devices: SavedDevice[] }>("GET", "/devices"),
+    createDevice: (body: DeviceFields) => request<{ device: SavedDevice }>("POST", "/devices", body),
+    updateDevice: (deviceId: string, body: Partial<DeviceFields>) =>
+      request<{ device: SavedDevice }>("PATCH", `/devices/${deviceId}`, body),
+    deleteDevice: (deviceId: string) => request<unknown>("DELETE", `/devices/${deviceId}`),
 
     agentTokens: () => request<{ tokens: AgentToken[] }>("GET", "/agent-tokens"),
     createAgentToken: (name: string, scope: AgentToken["scope"], userId: string) =>

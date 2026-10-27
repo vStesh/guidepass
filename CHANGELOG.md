@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-27
+
+**Updating from 0.3.x:** with the Update button, or `./tf.sh <instance> apply` by hand. The update adds a database table (migration `0011`); nothing else to do.
+
+### Added
+- **Saved devices.** Everyone can save the devices they test on in **Profile → My devices**: a name of their choosing, the platform, the model, the OS version and any other settings that matter (browser, screen, dark mode). When starting a guide, tapping a saved device fills in the platform and the device. Only devices for the app's platforms are offered. Each member sees only their own devices (up to 30), and they are deleted when the member is removed from the team. Runs keep their own copy of the description, so editing or deleting a device changes no past results.
+
+### Changed
+- A run's device description can be up to 200 characters (was 100), to fit a saved device's model, OS and settings.
+- All packages, including `@guidepass/schema`, carry the release version again (it was left at 0.3.2 in 0.3.3).
+
 ## [0.3.3] - 2026-10-21
 
 **Updating from 0.3.2:** with the Update button, or `./tf.sh <instance> apply` by hand. Nothing else to do.
