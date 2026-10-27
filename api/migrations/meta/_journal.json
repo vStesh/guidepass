@@ -78,6 +78,13 @@
       "when": 1791107671186,
       "tag": "0010_attachments",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1793120387390,
+      "tag": "0011_saved_devices",
+      "breakpoints": true
     }
   ]
 }

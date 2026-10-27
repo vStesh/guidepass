@@ -30,7 +30,8 @@ runRoutes.post(
       .object({
         environment: z.string().min(1),
         platform,
-        device: z.string().trim().min(1).max(100),
+        // Room for a saved device's model, OS and details together.
+        device: z.string().trim().min(1).max(200),
         build: z.string().trim().max(60).optional(),
         commit: z.string().trim().max(60).optional(),
         account: z.string().trim().max(100).optional(),

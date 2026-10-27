@@ -3,7 +3,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { requireMembership, type AppEnv } from "../context.ts";
 import type { Db } from "../db/client.ts";
-import { invitations, memberships, users } from "../db/schema.ts";
+import { devices, invitations, memberships, users } from "../db/schema.ts";
 import { ApiError } from "../errors.ts";
 import { revokeTokensOf } from "../services/agentTokens.ts";
 import { validate } from "../validate.ts";
@@ -61,7 +61,7 @@ memberRoutes.patch(
   },
 );
 
-/** Removes someone from the team and revokes their agent tokens. Their runs and results stay. */
+/** Removes someone from the team, revokes their agent tokens and forgets their saved devices. Their runs and results stay. */
 memberRoutes.delete(
   "/members/:userId",
   validate("param", z.object({ userId: z.string().min(1) })),
@@ -78,6 +78,7 @@ memberRoutes.delete(
       await tx.delete(memberships).where(and(eq(memberships.teamId, teamId), eq(memberships.userId, userId)));
       // Their agents lose access too.
       await revokeTokensOf(tx as Db, teamId, userId);
+      await tx.delete(devices).where(and(eq(devices.teamId, teamId), eq(devices.userId, userId)));
     });
     return c.json({ removed: userId });
   },

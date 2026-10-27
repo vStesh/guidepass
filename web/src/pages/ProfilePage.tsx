@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
 import type { Locale } from "../api.ts";
+import { MyDevices } from "../components/Devices.tsx";
 import { ErrorBox } from "../components/ui.tsx";
 import { locales, useI18n } from "../i18n/index.tsx";
 import { useSession } from "../session.tsx";
@@ -55,6 +56,7 @@ export function ProfilePage() {
         {saved && <p className="notice notice-ok">{t("profile.saved")}</p>}
         {error ? <ErrorBox error={error} /> : null}
       </form>
+      <MyDevices />
       <button type="button" className="button section-gap" onClick={signOut}>
         {t("profile.signOut")}
       </button>

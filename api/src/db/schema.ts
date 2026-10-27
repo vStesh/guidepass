@@ -95,6 +95,28 @@ export const agentTokens = pgTable("agent_tokens", {
   revokedAt: timestamp("revoked_at", { withTimezone: true }),
 });
 
+/**
+ * A member's saved test device, picked with one tap when starting a run. Runs keep
+ * their own copy of the description, so editing or deleting a device changes no results.
+ */
+export const devices = pgTable(
+  "devices",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    teamId: uuid("team_id").notNull().references(() => teams.id),
+    userId: text("user_id").notNull().references(() => users.id),
+    /** The member's own label, e.g. "My work iPhone". */
+    name: text("name").notNull(),
+    platform: text("platform").$type<Platform>().notNull(),
+    model: text("model").notNull(),
+    os: text("os"),
+    /** Anything else that matters for testing: browser, screen, locale, dark mode. */
+    details: text("details"),
+    createdAt: createdAt(),
+  },
+  (t) => [index("devices_member").on(t.teamId, t.userId)],
+);
+
 /** Instance-wide list of environments, seeded at deploy and edited by owners. */
 export const environments = pgTable("environments", {
   key: text("key").primaryKey(),
