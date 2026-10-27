@@ -13,7 +13,7 @@
   "dependencies": {
     "@guidepass/schema": "*",
     "aws-amplify": "^6.22.1",
-    "dompurify": "^3.4.16",
+    "dompurify": "^3.4.17",
     "marked": "^18.0.14",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
