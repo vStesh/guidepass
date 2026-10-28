@@ -70,6 +70,8 @@ export interface App {
   platforms: Platform[];
   platformNames: Record<string, string>;
   slack: { configured: boolean; events: SlackEvent[] };
+  /** Hidden from lists and agents, takes no new guides or runs; owners restore it. */
+  archived: boolean;
   areas?: Area[];
 }
 
@@ -346,6 +348,7 @@ export function createApi(auth: Auth, team: () => string | null = chosenTeam) {
         name?: string;
         platforms?: Platform[];
         platformNames?: Record<string, string>;
+        archived?: boolean;
         slack?: { webhookUrl?: string | null; events?: SlackEvent[] };
       },
     ) => request<{ app: App }>("PATCH", `/apps/${appId}`, body),

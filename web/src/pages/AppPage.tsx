@@ -58,6 +58,7 @@ export function AppPage() {
                 ))}
               </span>
             </div>
+            {app.archived && <p className="notice">{t("apps.archivedNotice")}</p>}
 
             <div className="filters">
               <select value={areaId} onChange={(e) => setParam("area", e.target.value)} aria-label={t("app.areas")}>
@@ -128,14 +129,15 @@ export function AppPage() {
               }
             </Load>
 
-            {canWrite(me) && <NewAreaForm appId={app.id} onDone={reloadApp} />}
-            {isOwner(me) && (
+            {canWrite(me) && !app.archived && <NewAreaForm appId={app.id} onDone={reloadApp} />}
+            {isOwner(me) && !app.archived && (
               <>
                 <AppPlatforms app={app} onSaved={reloadApp} />
                 <SlackSettings app={app} onSaved={reloadApp} />
               </>
             )}
-            {canWrite(me) && <UploadGuideForm appId={app.id} areas={app.areas} onUploaded={reloadGuides} />}
+            {canWrite(me) && !app.archived && <UploadGuideForm appId={app.id} areas={app.areas} onUploaded={reloadGuides} />}
+            {isOwner(me) && <ArchiveApp app={app} onSaved={reloadApp} />}
           </>
         );
       }}
@@ -340,5 +342,40 @@ function AppPlatforms({ app, onSaved }: { app: App; onSaved: () => void }) {
         </button>
       </div>
     </div>
+  );
+}
+
+/** Owners archive an app the team no longer tests, or bring it back. */
+function ArchiveApp({ app, onSaved }: { app: App; onSaved: () => void }) {
+  const { t } = useI18n();
+  const { api } = useSession();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<unknown>(null);
+
+  async function toggle() {
+    if (!app.archived && !window.confirm(t("apps.archiveConfirm", { name: app.name }))) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await api.updateApp(app.id, { archived: !app.archived });
+      onSaved();
+    } catch (err) {
+      setError(err);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className="card stack section-gap">
+      <h2>{t(app.archived ? "apps.restoreTitle" : "apps.archiveTitle")}</h2>
+      <p className="muted">{t(app.archived ? "apps.restoreHint" : "apps.archiveHint")}</p>
+      <div className="row">
+        <button type="button" className="button" disabled={busy} onClick={() => void toggle()}>
+          {t(app.archived ? "apps.restore" : "apps.archive")}
+        </button>
+      </div>
+      {error ? <ErrorBox error={error} /> : null}
+    </section>
   );
 }

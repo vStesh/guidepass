@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-28
+
+**Updating from 0.5.0:** with the Update button, or `./tf.sh <instance> apply` by hand. The update adds a column to the apps table (migration `0012`); nothing else to do.
+
+### Added
+- **Archiving apps.** Owners archive an app the team no longer tests from its page, and restore it from there. An archived app moves to a collapsed *Archived apps* section, its guides leave the guide list and its filter, and agents no longer see it in `list_apps`. It takes no new guides, areas or test runs (the API answers `422` with `reason: app_archived`); its guides and results stay readable on the app's page. Nothing is deleted.
+
 ## [0.5.0] - 2026-10-28
 
 **Updating from 0.4.0:** with the Update button, or `./tf.sh <instance> apply` by hand. No database changes. After updating, only owners of the instance's first team see *Settings* and the update banner.

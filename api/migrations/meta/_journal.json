@@ -85,6 +85,13 @@
       "when": 1793120387390,
       "tag": "0011_saved_devices",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1793221025098,
+      "tag": "0012_archived_apps",
+      "breakpoints": true
     }
   ]
 }

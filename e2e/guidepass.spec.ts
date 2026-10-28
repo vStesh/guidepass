@@ -131,3 +131,23 @@ test("the owner starts a second team and switches between the two", async ({ pag
   await expect(page.getByText("Add the first app your team tests.")).toBeVisible();
   await expect(page).toHaveURL(/\/apps$/);
 });
+
+test("the owner archives an app the team no longer tests, then restores it", async ({ page }) => {
+  const old = await ok(
+    await (await apiAs(owner)).post("apps", { data: { slug: "old-app", name: "Old app", platforms: ["web"] } }),
+  );
+  await signIn(page, owner);
+  page.on("dialog", (dialog) => void dialog.accept());
+  await page.goto(`/apps/${old.app.id}`);
+  await page.getByRole("button", { name: "Archive", exact: true }).click();
+  await expect(page.getByText(/This app is archived/)).toBeVisible();
+  await expect(page.getByRole("button", { name: "Upload a guide" })).toHaveCount(0);
+
+  await page.goto("/apps");
+  await expect(page.locator("main > ul.list")).not.toContainText("Old app");
+  await page.getByText("Archived apps (1)").click();
+  await page.getByRole("link", { name: /Old app/ }).click();
+  await page.getByRole("button", { name: "Restore", exact: true }).click();
+  await expect(page.getByText(/This app is archived/)).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Upload a guide" })).toBeVisible();
+});

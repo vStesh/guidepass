@@ -42,9 +42,18 @@ export async function getApp(db: Db, teamId: string, appId: string) {
   return { ...app, areas: appAreas };
 }
 
-/** Apps with their areas and how many active guides each area has. */
+/** Refuses changes to an archived app: new guides, areas, runs. */
+export function assertNotArchived(app: { archived: boolean }) {
+  if (app.archived) throw new ApiError("invalid", "This app is archived. An owner can restore it on the app's page.", { reason: "app_archived" });
+}
+
+/** Apps the team still works on, with their areas and how many active guides each area has. */
 export async function listAppsWithAreas(db: Db, teamId: string) {
-  const appRows = await db.select().from(apps).where(eq(apps.teamId, teamId)).orderBy(asc(apps.name));
+  const appRows = await db
+    .select()
+    .from(apps)
+    .where(and(eq(apps.teamId, teamId), eq(apps.archived, false)))
+    .orderBy(asc(apps.name));
   const areaRows = await db
     .select({ area: areas, activeGuides: count(guides.id) })
     .from(areas)
@@ -63,6 +72,7 @@ export async function listAppsWithAreas(db: Db, teamId: string) {
 
 export async function createArea(db: Db, teamId: string, appId: string, body: { slug: string; name: string }) {
   const app = await getApp(db, teamId, appId);
+  assertNotArchived(app);
   try {
     const [created] = await db.insert(areas).values({ ...body, appId: app.id }).returning();
     return created!;
@@ -92,7 +102,9 @@ export interface GuideFilters {
 /** Guides of the team, newest first, each with its app. */
 export async function listGuides(db: Db, teamId: string, query: GuideFilters = {}) {
   const filters = [eq(apps.teamId, teamId)];
+  // An archived app's guides show only on its own page.
   if (query.appId) filters.push(eq(guides.appId, query.appId));
+  else filters.push(eq(apps.archived, false));
   if (query.areaId) filters.push(eq(guides.areaId, query.areaId));
   const status = query.status ?? "active";
   if (status !== "all") filters.push(eq(guides.status, status));

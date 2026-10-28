@@ -3,6 +3,7 @@ import { diffScenarios, validateGuide, type ScenarioDiff } from "@guidepass/sche
 import type { Db } from "../db/client.ts";
 import { apps, areas, environments, guideVersions, guides, results, runs } from "../db/schema.ts";
 import { ApiError, isUniqueViolation } from "../errors.ts";
+import { assertNotArchived } from "./catalog.ts";
 
 /** Who uploads: always a person; `tokenId` when their agent does it through MCP. */
 export type Author = { userId: string; tokenId?: string };
@@ -57,6 +58,7 @@ async function upload(db: Db, input: UploadGuideInput): Promise<UploadGuideResul
     .from(apps)
     .where(and(eq(apps.id, input.appId), eq(apps.teamId, input.teamId)));
   if (!app) throw new ApiError("not_found", "App not found.");
+  assertNotArchived(app);
 
   if (input.areaId) {
     const [area] = await db

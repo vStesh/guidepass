@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { Link } from "react-router";
+import type { App } from "../api.ts";
 import { PlatformsEditor, type PlatformsValue } from "../components/PlatformsEditor.tsx";
 import { Chip, ErrorBox, Load, platformLabel, slugify } from "../components/ui.tsx";
 import { useI18n } from "../i18n/index.tsx";
@@ -31,8 +32,29 @@ export function AppsPage() {
         />
       )}
       <Load state={state} reload={reload}>
-        {({ apps }) =>
-          apps.length ? (
+        {({ apps }) => {
+          const active = apps.filter((a) => !a.archived);
+          const archived = apps.filter((a) => a.archived);
+          return (
+            <>
+              {active.length ? <AppList apps={active} /> : <p className="muted">{isOwner(me) ? t("apps.emptyOwner") : t("apps.empty")}</p>}
+              {archived.length > 0 && (
+                <details className="section-gap">
+                  <summary>{t("apps.archivedList", { count: archived.length })}</summary>
+                  <AppList apps={archived} />
+                </details>
+              )}
+            </>
+          );
+        }}
+      </Load>
+    </>
+  );
+}
+
+function AppList({ apps }: { apps: App[] }) {
+  const { t } = useI18n();
+  return (
             <ul className="list">
               {apps.map((app) => (
                 <li key={app.id}>
@@ -48,12 +70,6 @@ export function AppsPage() {
                 </li>
               ))}
             </ul>
-          ) : (
-            <p className="muted">{isOwner(me) ? t("apps.emptyOwner") : t("apps.empty")}</p>
-          )
-        }
-      </Load>
-    </>
   );
 }
 
