@@ -141,6 +141,8 @@ export const apps = pgTable(
     /** Slack Incoming Webhook for this app's notifications. A secret: never returned by the API. */
     slackWebhookUrl: text("slack_webhook_url"),
     slackEvents: jsonb("slack_events").$type<SlackEvent[]>().notNull().default(["guide_created", "guide_updated"]),
+    /** Hidden from lists and agents; its guides and results stay readable. Owners can restore it. */
+    archived: boolean("archived").notNull().default(false),
     createdAt: createdAt(),
   },
   (t) => [unique().on(t.teamId, t.slug)],

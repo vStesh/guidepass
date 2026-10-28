@@ -92,7 +92,8 @@ export function GuidePage() {
             {content.meta && <p className="muted small">{content.meta}</p>}
             {guide.status === "archived" && <p className="notice">{t("guide.archived")}</p>}
 
-            {guide.status === "active" && isLatest && (
+            {app.archived && <p className="notice">{t("apps.archivedNotice")}</p>}
+            {guide.status === "active" && isLatest && !app.archived && (
               <StartRun guideId={guide.id} content={content} app={app} environments={environments} />
             )}
 

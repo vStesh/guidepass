@@ -72,7 +72,10 @@ appRoutes.get("/apps/:appId", appParam, async (c) => {
   return c.json({ app: publicApp(await getApp(c.var.db, teamId, c.req.valid("param").appId)) });
 });
 
-/** Rename an app or change its platforms. A platform that already has runs can't be removed. */
+/**
+ * Rename an app, change its platforms, or archive and restore it. A platform that
+ * already has runs can't be removed.
+ */
 appRoutes.patch(
   "/apps/:appId",
   appParam,
@@ -82,6 +85,7 @@ appRoutes.patch(
       name: z.string().trim().min(1).max(100).optional(),
       platforms: z.array(platformKey).min(1).max(12).optional(),
       platformNames: platformNames.optional(),
+      archived: z.boolean().optional(),
       slack: z
         .object({
           // null removes the webhook.
@@ -141,7 +145,7 @@ appRoutes.patch(
       : {};
     const [updated] = await c.var.db
       .update(apps)
-      .set({ name: body.name ?? app.name, platforms, platformNames: names, ...slack })
+      .set({ name: body.name ?? app.name, platforms, platformNames: names, archived: body.archived ?? app.archived, ...slack })
       .where(eq(apps.id, app.id))
       .returning();
     return c.json({ app: publicApp(updated!) });

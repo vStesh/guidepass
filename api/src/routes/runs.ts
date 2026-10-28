@@ -6,6 +6,7 @@ import { requireMembership, type AppEnv } from "../context.ts";
 import { apps, attachments, guideVersions, guides, results, runs } from "../db/schema.ts";
 import { ApiError } from "../errors.ts";
 import { announceRunProblems } from "../services/notifications.ts";
+import { assertNotArchived } from "../services/catalog.ts";
 import { countRun, getGuideResults, loadGuide } from "../services/results.ts";
 import { attachmentKey, attachmentsOf, reservedCount, uploadedCount } from "../services/attachments.ts";
 import { evidenceTypes, MAX_EVIDENCE_BYTES, MAX_EVIDENCE_FILES } from "../storage.ts";
@@ -44,6 +45,7 @@ runRoutes.post(
     const body = c.req.valid("json");
 
     if (guide.status !== "active") throw new ApiError("invalid", "This guide is archived.");
+    assertNotArchived(app);
     if (!guide.environments.includes(body.environment)) {
       throw new ApiError("invalid", `This guide is not run on ${body.environment}.`, {
         environments: guide.environments,

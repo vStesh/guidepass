@@ -110,7 +110,7 @@ export function GuidesPage() {
               />
               <select value={filters.appId} onChange={(e) => setParam("app", e.target.value)} aria-label={t("home.allApps")}>
                 <option value="">{t("home.allApps")}</option>
-                {apps.map((a) => (
+                {apps.filter((a) => !a.archived).map((a) => (
                   <option key={a.id} value={a.id}>
                     {a.name}
                   </option>
