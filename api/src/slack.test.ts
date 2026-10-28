@@ -87,7 +87,8 @@ describe("notifications", () => {
     const { guideId } = (await call("POST", `/apps/${appId}/guides`, { slug: "build-179", content: example })).body;
     expect(sent).toHaveLength(1);
     const text = sent[0]!.text;
-    expect(text).toContain(`<https://gp.example.com/guides/${guideId}|Build 179`);
+    // Links open the guide in its team, for people in several teams.
+    expect(text).toMatch(new RegExp(`<https://gp\\.example\\.com/guides/${guideId}\\?team=[0-9a-f-]{36}\\|Build 179`));
     expect(text).toContain("Фіча");
     expect(text).toContain("Development, Staging");
     expect(text).toContain("сценаріїв: 3 (ключових: 1)");

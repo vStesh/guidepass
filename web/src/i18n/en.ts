@@ -167,6 +167,12 @@ export const en = {
   "run.saved": "Saved",
   "run.olderVersion": "This run is on version {version}; the guide now has a newer one.",
 
+  "teams.switch": "Team",
+  "teams.name": "Team name",
+  "teams.new": "New team",
+  "teams.newHint": "A separate team on this instance, with its own apps, guides, people and agent tokens. Environments are shared. You become its owner and switch to it; invite people from there.",
+  "teams.newPlaceholder": "e.g. School+",
+  "teams.create": "Create team",
   "team.title": "Team",
   "team.members": "Members",
   "team.role.owner": "Owner",

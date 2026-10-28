@@ -13,7 +13,7 @@ import { MAX_BODY } from "../limits.ts";
 import type { EvidenceStorage } from "../storage.ts";
 import { createArea, getGuideDetail, listAppsWithAreas, listGuides, setGuideStatus } from "../services/catalog.ts";
 import { uploadGuide } from "../services/guides.ts";
-import { announceGuideUpload, slackNotifier, type Notifier } from "../services/notifications.ts";
+import { announceGuideUpload, slackNotifier, teamPage, type Notifier } from "../services/notifications.ts";
 import { getGuideResults, loadGuide } from "../services/results.ts";
 
 export interface McpDeps {
@@ -76,7 +76,7 @@ const versionNumber = z.number().int().min(1).max(2_147_483_647);
 function buildServer({ db, guideLanguage, publicUrl, notifier, evidenceStorage }: McpDeps, agent: AgentIdentity): McpServer {
   const server = new McpServer({ name: "guidepass", version: "0.1.0" }, { instructions: SERVER_INSTRUCTIONS });
   const { teamId } = agent;
-  const guideUrl = (id: string) => `${publicUrl}/guides/${id}`;
+  const guideUrl = (id: string) => teamPage(publicUrl, `/guides/${id}`, teamId);
   const requireWrite = (tool: string) => {
     if (agent.scope !== "write") throw new ApiError("forbidden", `Token has read scope; ${tool} needs write.`);
   };

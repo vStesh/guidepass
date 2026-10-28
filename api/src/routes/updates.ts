@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import { requireMembership, type AppEnv } from "../context.ts";
+import { requireInstanceAdmin, requireMembership, type AppEnv } from "../context.ts";
 import { eq } from "drizzle-orm";
 import { instanceState } from "../db/schema.ts";
 import { ApiError } from "../errors.ts";
@@ -21,7 +21,7 @@ updateRoutes.get(
   "/updates",
   validate("query", z.object({ refresh: z.enum(["1"]).optional() })),
   async (c) => {
-    await requireMembership(c, "owner");
+    await requireInstanceAdmin(c);
     return c.json(
       await getUpdateStatus(c.var.db, {
         repository: c.var.updates.repository,
@@ -56,7 +56,7 @@ async function lastRun(c: { var: AppEnv["Variables"] }): Promise<StoredRun | nul
 
 /** The last update started from the web app, with its live progress and log. */
 updateRoutes.get("/updates/run", async (c) => {
-  await requireMembership(c, "owner");
+  await requireInstanceAdmin(c);
   const updater = updaterOf(c);
   const run = await lastRun(c);
   if (!run) return c.json({ run: null });
@@ -78,7 +78,7 @@ updateRoutes.post(
   "/updates/run",
   validate("json", z.object({ version: z.string().regex(/^\d+\.\d+\.\d+$/) })),
   async (c) => {
-    await requireMembership(c, "owner");
+    await requireInstanceAdmin(c);
     const updater = updaterOf(c);
     const { version } = c.req.valid("json");
     const status = await getUpdateStatus(c.var.db, { repository: c.var.updates.repository, fetch: c.var.updates.fetch });

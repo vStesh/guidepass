@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { BrowserRouter, Route, Routes } from "react-router";
-import { ApiError, createApi, type Me } from "./api.ts";
+import { ApiError, chooseTeam, chosenTeam, createApi, type Me } from "./api.ts";
 import type { Auth } from "./auth.ts";
 import { Layout } from "./components/Layout.tsx";
 import { ErrorBox } from "./components/ui.tsx";
@@ -19,19 +19,36 @@ import { SessionContext, type Session } from "./session.tsx";
 
 type State = { status: "loading" } | { status: "signedOut" } | { status: "error"; error: unknown } | { status: "ready"; me: Me };
 
+/** `?team=` on a link (Slack, an agent) opens the page in its team; dropped from the address once read. */
+function teamFromLink(): string | null {
+  const url = new URL(window.location.href);
+  const team = url.searchParams.get("team");
+  if (!team) return null;
+  url.searchParams.delete("team");
+  window.history.replaceState(window.history.state, "", url);
+  return team;
+}
+
 export function App({ auth }: { auth: Auth }) {
-  const api = useMemo(() => createApi(auth), [auth]);
+  // The team this tab works in, fixed until it reloads: other tabs may switch theirs.
+  const [team] = useState(() => ({ current: teamFromLink() ?? chosenTeam() }));
+  const api = useMemo(() => createApi(auth, () => team.current), [auth, team]);
   const [state, setState] = useState<State>({ status: "loading" });
 
   const loadMe = useCallback(async () => {
     try {
       const me = await api.me();
       rememberLocale(me.user.locale);
+      // The API falls back to the first team when the chosen one is gone: follow it.
+      if (me.team) {
+        team.current = me.team.id;
+        if (me.team.id !== chosenTeam()) chooseTeam(me.team.id);
+      }
       setState({ status: "ready", me });
     } catch (error) {
       setState(error instanceof ApiError && error.status === 401 ? { status: "signedOut" } : { status: "error", error });
     }
-  }, [api]);
+  }, [api, team]);
 
   useEffect(() => {
     void loadMe();
@@ -58,6 +75,11 @@ export function App({ auth }: { auth: Auth }) {
         setState({ status: "ready", me });
       },
       signOut,
+      switchTeam: (teamId) => {
+        chooseTeam(teamId);
+        // A fresh start: every page and cached list belongs to the old team.
+        window.location.assign("/");
+      },
     };
     content = (
       <SessionContext.Provider value={session}>

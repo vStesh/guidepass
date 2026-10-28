@@ -8,6 +8,8 @@ export interface Session {
   me: Me;
   setMe: (me: Me) => void;
   signOut: () => Promise<void>;
+  /** Work in another of the person's teams; reloads the app. */
+  switchTeam: (teamId: string) => void;
 }
 
 export const SessionContext = createContext<Session | null>(null);
@@ -19,6 +21,8 @@ export function useSession(): Session {
 }
 
 export const isOwner = (me: Me) => me.team?.role === "owner";
+/** Owners of the instance's first team: environments, updates, new teams. */
+export const isInstanceAdmin = (me: Me) => !!me.instanceAdmin;
 /** Owners and writers maintain guides: upload, add areas, archive, create their own agent tokens. */
 export const canWrite = (me: Me) => me.team?.role === "owner" || me.team?.role === "writer";
 
