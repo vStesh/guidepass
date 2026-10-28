@@ -117,7 +117,7 @@ export const devices = pgTable(
   (t) => [index("devices_member").on(t.teamId, t.userId)],
 );
 
-/** Instance-wide list of environments, seeded at deploy and edited by owners. */
+/** Instance-wide list of environments, shared by all teams, seeded at deploy and edited by instance admins. */
 export const environments = pgTable("environments", {
   key: text("key").primaryKey(),
   name: text("name").notNull(),

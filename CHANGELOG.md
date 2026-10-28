@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-28
+
+**Updating from 0.4.0:** with the Update button, or `./tf.sh <instance> apply` by hand. No database changes. After updating, only owners of the instance's first team see *Settings* and the update banner.
+
+### Added
+- **Several teams on one instance.** Each team has its own apps, guides, runs, members, agent tokens and saved devices; environments are shared. Owners of the instance's first team create new teams on the *Team* page (and become their owners); people in more than one team switch in the header. An invitation to another team is accepted on the person's next sign-in, and removing someone from one team leaves their other teams alone. Owners can rename their team.
+- Links in Slack messages and the `url` the MCP server returns carry `?team=`, so they open in the right team for people in several.
+
+### Changed
+- Instance administration — environments, updates, new teams — belongs to the owners of the first team. Owners of other teams run only their own team.
+- The web app sends the team it works in with every request (`X-Guidepass-Team`); each browser tab keeps its team until it reloads. A team the person isn't in is refused (403) rather than silently replaced.
+
 ## [0.4.0] - 2026-10-27
 
 **Updating from 0.3.x:** with the Update button, or `./tf.sh <instance> apply` by hand. The update adds a database table (migration `0011`); nothing else to do.

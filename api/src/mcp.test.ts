@@ -198,7 +198,8 @@ describe("MCP tools", () => {
 
     const uploaded = await tool(client, "upload_guide", { appId, areaId, slug: "build-179", content: example });
     const guideId = uploaded.data.guideId;
-    expect(uploaded.data.url).toBe(`https://gp.example.com/guides/${guideId}`);
+    // Links open the guide in the token's team, for people in several teams.
+    expect(uploaded.data.url).toMatch(new RegExp(`^https://gp\\.example\\.com/guides/${guideId}\\?team=[0-9a-f-]{36}$`));
 
     // A person tests; the agent only reads.
     const run = await call("POST", `/guides/${guideId}/runs`, { environment: "dev", platform: "ios", device: "iPhone 15", build: "179" });

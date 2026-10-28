@@ -1,20 +1,58 @@
 import { validate } from "../validate.ts";
-import { asc, desc, eq, sql } from "drizzle-orm";
+import { asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { z } from "zod";
-import { findMembership, requireMembership, type AppEnv } from "../context.ts";
+import { findMembership, isInstanceAdmin, listMemberships, requireInstanceAdmin, requireMembership, type AppEnv } from "../context.ts";
+import { acceptPendingInvitations } from "../services/invitations.ts";
 import { environments, memberships, teams, users } from "../db/schema.ts";
 import { ApiError, isUniqueViolation } from "../errors.ts";
 
 export const teamRoutes = new Hono<AppEnv>();
 
-/** The signed-in person and their team, or `team: null` before setup or an invitation. */
+/**
+ * The signed-in person, the team they are working in (the one `X-Guidepass-Team`
+ * names, or their first), and every team they are in. `team: null` before setup or
+ * an invitation. Signing in also accepts invitations from other teams.
+ */
 teamRoutes.get("/me", async (c) => {
-  const membership = await findMembership(c);
+  await acceptPendingInvitations(c.var.db, c.var.user);
+  const membership = await findMembership(c, { fallback: true });
   const features = { attachments: !!c.var.evidence };
-  if (!membership) return c.json({ user: c.var.user, team: null, features });
-  const [team] = await c.var.db.select({ id: teams.id, name: teams.name }).from(teams).where(eq(teams.id, membership.teamId));
-  return c.json({ user: c.var.user, team: { ...team!, role: membership.role }, features });
+  const instanceAdmin = await isInstanceAdmin(c.var.db, c.var.user.id);
+  if (!membership) return c.json({ user: c.var.user, team: null, teams: [], instanceAdmin, features });
+  const all = await listMemberships(c.var.db, c.var.user.id);
+  const names = await c.var.db
+    .select({ id: teams.id, name: teams.name })
+    .from(teams)
+    .where(inArray(teams.id, all.map((m) => m.teamId)));
+  const list = all.map((m) => ({ id: m.teamId, name: names.find((n) => n.id === m.teamId)?.name ?? "", role: m.role }));
+  const team = list.find((t) => t.id === membership.teamId)!;
+  return c.json({ user: c.var.user, team, teams: list, instanceAdmin, features });
+});
+
+const teamName = z.string().trim().min(1).max(100);
+
+/** A new team on this instance, with the caller as its owner. Instance admins only. */
+teamRoutes.post("/teams", validate("json", z.object({ name: teamName })), async (c) => {
+  await requireInstanceAdmin(c);
+  const { name } = c.req.valid("json");
+  const team = await c.var.db.transaction(async (tx) => {
+    const [created] = await tx.insert(teams).values({ name }).returning();
+    await tx.insert(memberships).values({ teamId: created!.id, userId: c.var.user.id, role: "owner" });
+    return created!;
+  });
+  return c.json({ team: { id: team.id, name: team.name, role: "owner" } }, 201);
+});
+
+/** Rename the current team. */
+teamRoutes.patch("/team", validate("json", z.object({ name: teamName })), async (c) => {
+  const { teamId } = await requireMembership(c, "owner");
+  const [team] = await c.var.db
+    .update(teams)
+    .set({ name: c.req.valid("json").name })
+    .where(eq(teams.id, teamId))
+    .returning({ id: teams.id, name: teams.name });
+  return c.json({ team: { ...team!, role: "owner" } });
 });
 
 /** Update your own profile: display name and interface language. */
@@ -79,7 +117,7 @@ teamRoutes.post(
   "/environments",
   validate("json", z.object({ key: environmentKey, name: z.string().trim().min(1).max(60) })),
   async (c) => {
-    await requireMembership(c, "owner");
+    await requireInstanceAdmin(c);
     const body = c.req.valid("json");
     const [last] = await c.var.db
       .select({ position: environments.position })
@@ -112,7 +150,7 @@ teamRoutes.patch(
     z.object({ name: z.string().trim().min(1).max(60).optional(), archived: z.boolean().optional() }),
   ),
   async (c) => {
-    await requireMembership(c, "owner");
+    await requireInstanceAdmin(c);
     const { key } = c.req.valid("param");
     const body = c.req.valid("json");
     const all = await c.var.db.select().from(environments);
@@ -135,7 +173,7 @@ teamRoutes.put(
   "/environments/order",
   validate("json", z.object({ keys: z.array(environmentKey).min(1) })),
   async (c) => {
-    await requireMembership(c, "owner");
+    await requireInstanceAdmin(c);
     const { keys } = c.req.valid("json");
     const existing = (await c.var.db.select({ key: environments.key }).from(environments)).map((e) => e.key);
     if (keys.length !== existing.length || new Set(keys).size !== keys.length || keys.some((k) => !existing.includes(k))) {

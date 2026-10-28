@@ -84,6 +84,7 @@ code, .code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size:
 .brand { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; color: var(--text); text-decoration: none; }
 .brand-large { font-size: 1.2rem; margin-bottom: 1rem; }
 .brand-team { font-weight: 500; color: var(--muted); }
+.team-switcher { width: auto; max-width: 14rem; padding: 4px 8px; font-weight: 600; }
 .nav { display: flex; gap: 4px; }
 .nav a { padding: 6px 10px; border-radius: 8px; color: var(--muted); text-decoration: none; font-weight: 600; font-size: 0.95rem; }
 .nav a.active { background: var(--accent-bg); color: var(--accent-strong); }

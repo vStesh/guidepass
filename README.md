@@ -14,7 +14,7 @@ It is built for small teams that ship mobile and web apps with AI coding agents:
 
 ## Concepts
 
-- **Team** — people with a role: `tester` runs guides and marks results; `writer` also uploads and archives guides, adds areas and creates agent tokens for themselves; `owner` also manages apps, environments, members, Slack and everyone's agent tokens. New members join by email invitation.
+- **Team** — people with a role: `tester` runs guides and marks results; `writer` also uploads and archives guides, adds areas and creates agent tokens for themselves; `owner` also manages apps, members, Slack and everyone's agent tokens. New members join by email invitation. One instance can hold several teams, each with its own apps, guides, people and agent tokens; people in more than one switch between them in the header. Owners of the first team administer the instance: environments (shared by all teams), updates and new teams.
 - **App** — something the team tests, e.g. a mobile app with iOS and Android builds.
 - **Area** — a feature or module inside an app (MFA, wallet, chat…). Guides are grouped by area.
 - **Environment** — where a build is tested, e.g. `dev`, `stg`, `prod`. The list is set when Guidepass is deployed and can be edited later by an owner: add, rename, reorder, archive. Each environment has a stable `key` and a display name.

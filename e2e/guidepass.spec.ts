@@ -103,3 +103,31 @@ test("the owner sees the tester's result with its screenshot", async ({ page }) 
   );
   expect(size).toBeLessThanOrEqual(1600);
 });
+
+test("the owner starts a second team and switches between the two", async ({ page }) => {
+  await signIn(page, owner);
+  await page.goto("/team");
+  await page.getByLabel("New team").fill("School+");
+  await page.getByRole("button", { name: "Create team" }).click();
+
+  // The app reloads in the new team: its own, empty list of apps.
+  const switcher = page.getByLabel("Team", { exact: true });
+  await expect(switcher).toHaveValue(/.+/);
+  await expect(switcher.locator("option:checked")).toHaveText("School+");
+  await page.goto("/apps");
+  await expect(page.getByText("Add the first app your team tests.")).toBeVisible();
+  await expect(page.getByText("Acme mobile")).toHaveCount(0);
+
+  await switcher.selectOption({ label: "Acme" });
+  await expect(page.getByRole("link", { name: /Build 179/ })).toBeVisible();
+  await page.goto("/apps");
+  await expect(page.getByText("Acme mobile")).toBeVisible();
+
+  // A link from Slack or an agent carries its team and opens the page there.
+  const { teams } = await ok(await (await apiAs(owner)).get("me"));
+  const school = teams.find((t: { name: string }) => t.name === "School+");
+  await page.goto(`/apps?team=${school.id}`);
+  await expect(switcher.locator("option:checked")).toHaveText("School+");
+  await expect(page.getByText("Add the first app your team tests.")).toBeVisible();
+  await expect(page).toHaveURL(/\/apps$/);
+});

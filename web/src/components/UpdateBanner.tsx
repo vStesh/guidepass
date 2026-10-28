@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import type { UpdateStatus } from "../api.ts";
 import { useI18n } from "../i18n/index.tsx";
-import { isOwner, useSession } from "../session.tsx";
+import { isInstanceAdmin, useSession } from "../session.tsx";
 import { Markdown, formatDate } from "./ui.tsx";
 
 const DISMISSED_KEY = "guidepass.dismissedUpdate";
@@ -20,7 +20,7 @@ function dismissedVersion(): string | null {
 export function UpdateBanner() {
   const { t, locale } = useI18n();
   const { api, me } = useSession();
-  const owner = isOwner(me);
+  const owner = isInstanceAdmin(me);
   const [status, setStatus] = useState<UpdateStatus | null>(null);
   const [hidden, setHidden] = useState(dismissedVersion);
 

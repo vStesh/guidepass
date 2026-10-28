@@ -13,9 +13,20 @@ export interface User {
 
 export type SlackEvent = "guide_created" | "guide_updated" | "run_problems";
 
+export interface TeamRef {
+  id: string;
+  name: string;
+  role: Role;
+}
+
 export interface Me {
   user: User;
-  team: { id: string; name: string; role: Role } | null;
+  /** The team the app is working in. */
+  team: TeamRef | null;
+  /** Every team the person is in. */
+  teams: TeamRef[];
+  /** Owner of the instance's first team: runs environments, updates and new teams. */
+  instanceAdmin: boolean;
   /** Optional parts this instance has set up. */
   features?: { attachments: boolean };
 }
@@ -257,13 +268,41 @@ export class ApiError extends Error {
   }
 }
 
-export function createApi(auth: Auth) {
+const TEAM_KEY = "guidepass.team";
+
+/** The team chosen in this browser, sent with every request; the API falls back to the first. */
+export function chosenTeam(): string | null {
+  try {
+    return localStorage.getItem(TEAM_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function chooseTeam(teamId: string) {
+  try {
+    localStorage.setItem(TEAM_KEY, teamId);
+  } catch {
+    // Without storage the app stays in the first team.
+  }
+}
+
+/**
+ * `team` gives the team this tab works in. It is fixed per tab, so switching teams
+ * in another tab never sends this tab's actions to a team it doesn't show.
+ */
+export function createApi(auth: Auth, team: () => string | null = chosenTeam) {
   async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
     const headers = await auth.headers();
     if (!headers) throw new ApiError(401, "unauthenticated", "Sign in to continue.");
+    const teamId = team();
     const response = await fetch(`/api${path}`, {
       method,
-      headers: { ...headers, ...(body === undefined ? {} : { "content-type": "application/json" }) },
+      headers: {
+        ...headers,
+        ...(teamId ? { "x-guidepass-team": teamId } : {}),
+        ...(body === undefined ? {} : { "content-type": "application/json" }),
+      },
       body: body === undefined ? undefined : JSON.stringify(body),
     });
     const data = await response.json().catch(() => null);
@@ -287,6 +326,8 @@ export function createApi(auth: Auth) {
     updateRun: () => request<{ run: UpdateRun | null }>("GET", "/updates/run"),
     startUpdate: (version: string) => request<{ run: UpdateRun }>("POST", "/updates/run", { version }),
     updateMe: (body: { name?: string; locale?: Locale }) => request<{ user: User }>("PATCH", "/me", body),
+    createTeam: (name: string) => request<{ team: TeamRef }>("POST", "/teams", { name }),
+    renameTeam: (name: string) => request<{ team: TeamRef }>("PATCH", "/team", { name }),
     setup: (teamName: string) => request<{ team: Me["team"] }>("POST", "/setup", { teamName }),
     environments: () => request<{ environments: Environment[] }>("GET", "/environments"),
     createEnvironment: (key: string, name: string) =>

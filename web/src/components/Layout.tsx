@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { NavLink, Outlet, useLocation } from "react-router";
 import { useI18n } from "../i18n/index.tsx";
-import { isOwner, useSession } from "../session.tsx";
+import { isInstanceAdmin, useSession } from "../session.tsx";
 import { ErrorBox } from "./ui.tsx";
 import { UpdateBanner } from "./UpdateBanner.tsx";
 
@@ -15,18 +15,21 @@ export function Layout() {
   return (
     <div className="shell">
       <header className="topbar">
-        <NavLink to="/" className="brand">
-          <img src="/favicon.svg" alt="" width={24} height={24} />
-          <span>{t("app.name")}</span>
-          {me.team && <span className="brand-team">{me.team.name}</span>}
-        </NavLink>
+        <div className="row">
+          <NavLink to="/" className="brand">
+            <img src="/favicon.svg" alt="" width={24} height={24} />
+            <span>{t("app.name")}</span>
+            {me.team && me.teams.length < 2 && <span className="brand-team">{me.team.name}</span>}
+          </NavLink>
+          <TeamSwitcher />
+        </div>
         <nav className="nav">
           <NavLink to="/" end>
             {t("nav.guides")}
           </NavLink>
           <NavLink to="/apps">{t("nav.apps")}</NavLink>
           <NavLink to="/team">{t("nav.team")}</NavLink>
-          {isOwner(me) && <NavLink to="/settings">{t("nav.settings")}</NavLink>}
+          {isInstanceAdmin(me) && <NavLink to="/settings">{t("nav.settings")}</NavLink>}
           <NavLink to="/profile">{t("nav.profile")}</NavLink>
         </nav>
       </header>
@@ -37,6 +40,27 @@ export function Layout() {
       </main>
       <Footer />
     </div>
+  );
+}
+
+/** For people in several teams: which one the app is working in. */
+function TeamSwitcher() {
+  const { t } = useI18n();
+  const { me, switchTeam } = useSession();
+  if (!me.team || me.teams.length < 2) return null;
+  return (
+    <select
+      className="team-switcher"
+      aria-label={t("teams.switch")}
+      value={me.team.id}
+      onChange={(e) => switchTeam(e.target.value)}
+    >
+      {me.teams.map((team) => (
+        <option key={team.id} value={team.id}>
+          {team.name}
+        </option>
+      ))}
+    </select>
   );
 }
 

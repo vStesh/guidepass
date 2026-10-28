@@ -130,6 +130,11 @@ interface GuideUpload {
   author: Author;
 }
 
+/** A page in the web app, opened in the team it belongs to (people can be in several). */
+export function teamPage(publicUrl: string, path: string, teamId: string | undefined) {
+  return `${publicUrl}${path}${teamId ? `?team=${teamId}` : ""}`;
+}
+
 async function guideUploadMessage(ctx: NotificationContext, input: GuideUpload) {
   const app = await loadApp(ctx.db, input.appId);
   const event: SlackEvent = input.version === 1 ? "guide_created" : "guide_updated";
@@ -137,7 +142,7 @@ async function guideUploadMessage(ctx: NotificationContext, input: GuideUpload) 
 
   const m = messages(ctx.language);
   const { content, diff } = input;
-  const title = link(`${ctx.publicUrl}/guides/${input.guideId}`, content.title);
+  const title = link(teamPage(ctx.publicUrl, `/guides/${input.guideId}`, app.teamId), content.title);
   const details = [
     content.type ? m.types[content.type] : null,
     (await environmentNames(ctx, content.environments)).join(", "),
@@ -191,7 +196,7 @@ async function runProblemsMessage(ctx: NotificationContext, input: RunProblems) 
     counts.untested ? m.untested(counts.untested) : null,
   ].filter(Boolean);
   const text =
-    `${m.problems}: ${link(`${ctx.publicUrl}/runs/${input.runId}`, input.guideTitle)}\n` +
+    `${m.problems}: ${link(teamPage(ctx.publicUrl, `/runs/${input.runId}`, app?.teamId), input.guideTitle)}\n` +
     `${escape(input.tester)} · ${escape(environment ?? input.environment)} · ${escape(platform)} · ${escape(input.device)}: ${parts.join(", ")}`;
   await send(ctx, app, "run_problems", text);
 }
@@ -200,6 +205,6 @@ async function runProblemsMessage(ctx: NotificationContext, input: RunProblems) 
 export async function sendTestNotification(ctx: NotificationContext, app: AppRow) {
   if (!app.slackWebhookUrl) return false;
   const m = messages(ctx.language);
-  await ctx.notify(app.slackWebhookUrl, { text: `${m.test} ${link(`${ctx.publicUrl}/apps/${app.id}`, app.name)}` });
+  await ctx.notify(app.slackWebhookUrl, { text: `${m.test} ${link(teamPage(ctx.publicUrl, `/apps/${app.id}`, app.teamId), app.name)}` });
   return true;
 }

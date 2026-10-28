@@ -4,7 +4,7 @@ import { AgentTokens } from "../components/AgentTokens.tsx";
 import { ConnectAgentGuide } from "../components/ConnectAgentGuide.tsx";
 import { ErrorBox, Load, formatDate } from "../components/ui.tsx";
 import { useI18n } from "../i18n/index.tsx";
-import { canWrite, isOwner, useLoad, useSession } from "../session.tsx";
+import { canWrite, isInstanceAdmin, isOwner, useLoad, useSession } from "../session.tsx";
 
 export function TeamPage() {
   const { t, locale } = useI18n();
@@ -29,6 +29,7 @@ export function TeamPage() {
   return (
     <>
       <h1>{t("team.title")}</h1>
+      {(owner || isInstanceAdmin(me)) && <TeamSettings />}
       {error ? <ErrorBox error={error} /> : null}
       <Load state={state} reload={reload}>
         {({ members, invitations }) => (
@@ -150,5 +151,84 @@ function InviteForm({ onInvited }: { onInvited: () => void }) {
       {message && <p className="notice notice-ok">{message}</p>}
       {error ? <ErrorBox error={error} /> : null}
     </form>
+  );
+}
+
+/** Owners rename their team; instance admins also start new teams, each with its own apps and people. */
+function TeamSettings() {
+  const { t } = useI18n();
+  const { api, me, setMe, switchTeam } = useSession();
+  const [name, setName] = useState(me.team?.name ?? "");
+  const [newTeam, setNewTeam] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState<unknown>(null);
+
+  async function run(fn: () => Promise<void>) {
+    if (busy) return;
+    setBusy(true);
+    setError(null);
+    setSaved(false);
+    try {
+      await fn();
+    } catch (err) {
+      setError(err);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function rename(event: FormEvent) {
+    event.preventDefault();
+    void run(async () => {
+      const { team } = await api.renameTeam(name.trim());
+      setMe({ ...me, team, teams: me.teams.map((x) => (x.id === team.id ? team : x)) });
+      setSaved(true);
+    });
+  }
+
+  function create(event: FormEvent) {
+    event.preventDefault();
+    void run(async () => {
+      const { team } = await api.createTeam(newTeam.trim());
+      switchTeam(team.id);
+    });
+  }
+
+  return (
+    <section className="card stack section-gap">
+      {isOwner(me) && (
+        <form className="field" onSubmit={rename}>
+          <span>{t("teams.name")}</span>
+          <div className="inline-form">
+            <input required maxLength={100} value={name} onChange={(e) => setName(e.target.value)} aria-label={t("teams.name")} />
+            <button type="submit" className="button" disabled={busy}>
+              {t("app.save")}
+            </button>
+          </div>
+        </form>
+      )}
+      {saved && <p className="notice notice-ok">{t("profile.saved")}</p>}
+      {isInstanceAdmin(me) && (
+        <form className="field" onSubmit={create}>
+          <span>{t("teams.new")}</span>
+          <span className="muted small">{t("teams.newHint")}</span>
+          <div className="inline-form">
+            <input
+              required
+              maxLength={100}
+              placeholder={t("teams.newPlaceholder")}
+              value={newTeam}
+              onChange={(e) => setNewTeam(e.target.value)}
+              aria-label={t("teams.new")}
+            />
+            <button type="submit" className="button button-primary" disabled={busy}>
+              {t("teams.create")}
+            </button>
+          </div>
+        </form>
+      )}
+      {error ? <ErrorBox error={error} /> : null}
+    </section>
   );
 }
