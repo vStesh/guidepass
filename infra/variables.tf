@@ -146,6 +146,17 @@ variable "updater_terraform_version" {
   }
 }
 
+variable "updater_snapshots_to_keep" {
+  description = "How many database snapshots taken before updates to keep; the updater deletes older ones after a successful update."
+  type        = number
+  default     = 3
+
+  validation {
+    condition     = var.updater_snapshots_to_keep >= 1 && floor(var.updater_snapshots_to_keep) == var.updater_snapshots_to_keep
+    error_message = "updater_snapshots_to_keep must be a whole number, at least 1."
+  }
+}
+
 variable "deletion_protection" {
   description = "Protect the database from deletion. Turn off only to tear an instance down."
   type        = bool

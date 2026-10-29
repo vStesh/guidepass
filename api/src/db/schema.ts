@@ -96,8 +96,9 @@ export const agentTokens = pgTable("agent_tokens", {
 });
 
 /**
- * A member's saved test device, picked with one tap when starting a run. Runs keep
- * their own copy of the description, so editing or deleting a device changes no results.
+ * A person's saved test device, picked with one tap when starting a run, the same in
+ * all their teams (`teamId` is where it was saved). Runs keep their own copy of the
+ * description, so editing or deleting a device changes no results.
  */
 export const devices = pgTable(
   "devices",

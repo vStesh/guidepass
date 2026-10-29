@@ -53,3 +53,5 @@ phases:
       - terraform init -input=false -backend-config="bucket=$STATE_BUCKET" -backend-config="key=$STATE_KEY" -backend-config="region=$STATE_REGION" -backend-config="encrypt=true" -backend-config="use_lockfile=true"
       - terraform apply -input=false -auto-approve -var "state_bucket=$STATE_BUCKET" -var "state_key=$STATE_KEY" -var "state_region=$STATE_REGION"
       - echo "Updated to $TARGET_VERSION"
+      # Only after a successful update: the snapshot just taken is the newest one kept.
+      - bash /tmp/release/infra/updater/prune-snapshots.sh "$DB_CLUSTER" "$SNAPSHOTS_TO_KEEP"

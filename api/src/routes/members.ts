@@ -61,7 +61,10 @@ memberRoutes.patch(
   },
 );
 
-/** Removes someone from the team, revokes their agent tokens and forgets their saved devices. Their runs and results stay. */
+/**
+ * Removes someone from the team and revokes their agent tokens there. Their saved
+ * devices go when they leave their last team. Their runs and results stay.
+ */
 memberRoutes.delete(
   "/members/:userId",
   validate("param", z.object({ userId: z.string().min(1) })),
@@ -78,7 +81,8 @@ memberRoutes.delete(
       await tx.delete(memberships).where(and(eq(memberships.teamId, teamId), eq(memberships.userId, userId)));
       // Their agents lose access too.
       await revokeTokensOf(tx as Db, teamId, userId);
-      await tx.delete(devices).where(and(eq(devices.teamId, teamId), eq(devices.userId, userId)));
+      const [other] = await tx.select({ teamId: memberships.teamId }).from(memberships).where(eq(memberships.userId, userId)).limit(1);
+      if (!other) await tx.delete(devices).where(eq(devices.userId, userId));
     });
     return c.json({ removed: userId });
   },

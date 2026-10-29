@@ -31,6 +31,7 @@ locals {
     db_subnet_ids             = var.db_subnet_ids
     db_engine_version         = var.db_engine_version
     updater_terraform_version = var.updater_terraform_version
+    updater_snapshots_to_keep = var.updater_snapshots_to_keep
   }
 
   # What the updater needs that isn't a variable. Read from SSM, not from the
@@ -160,6 +161,10 @@ resource "aws_codebuild_project" "update" {
     environment_variable {
       name  = "TERRAFORM_VERSION"
       value = var.updater_terraform_version
+    }
+    environment_variable {
+      name  = "SNAPSHOTS_TO_KEEP"
+      value = tostring(var.updater_snapshots_to_keep)
     }
     # Set by the API for each run (the only overrides IAM allows): the release and its commit.
     environment_variable {

@@ -7,9 +7,10 @@ import { ApiError } from "../errors.ts";
 import { validate } from "../validate.ts";
 
 /**
- * Each member's saved test devices: a platform, a model, an OS and whatever else
+ * Each person's saved test devices: a platform, a model, an OS and whatever else
  * matters, under a name of their choosing. Starting a run fills them in with one
- * tap. Everyone sees and changes only their own.
+ * tap. They are the person's own, the same in every team they are in; everyone
+ * sees and changes only theirs. Saving one needs a team (any).
  */
 export const deviceRoutes = new Hono<AppEnv>();
 
@@ -38,14 +39,14 @@ const columns = {
   details: devices.details,
 };
 
-const mine = (teamId: string, userId: string) => and(eq(devices.teamId, teamId), eq(devices.userId, userId));
+const mine = (userId: string) => eq(devices.userId, userId);
 
 deviceRoutes.get("/devices", async (c) => {
-  const { teamId } = await requireMembership(c);
+  await requireMembership(c);
   const rows = await c.var.db
     .select(columns)
     .from(devices)
-    .where(mine(teamId, c.var.user.id))
+    .where(mine(c.var.user.id))
     .orderBy(asc(devices.name), asc(devices.createdAt));
   return c.json({ devices: rows });
 });
@@ -53,7 +54,7 @@ deviceRoutes.get("/devices", async (c) => {
 deviceRoutes.post("/devices", validate("json", z.object(fields)), async (c) => {
   const { teamId } = await requireMembership(c);
   const body = c.req.valid("json");
-  const [saved] = await c.var.db.select({ total: count() }).from(devices).where(mine(teamId, c.var.user.id));
+  const [saved] = await c.var.db.select({ total: count() }).from(devices).where(mine(c.var.user.id));
   if (Number(saved?.total ?? 0) >= MAX_DEVICES) throw new ApiError("invalid", `You can save up to ${MAX_DEVICES} devices.`);
   const [device] = await c.var.db
     .insert(devices)
@@ -67,7 +68,7 @@ deviceRoutes.patch(
   deviceParam,
   validate("json", z.object(fields).partial()),
   async (c) => {
-    const { teamId } = await requireMembership(c);
+    await requireMembership(c);
     const body = c.req.valid("json");
     const patch = {
       ...body,
@@ -78,7 +79,7 @@ deviceRoutes.patch(
     const [device] = await c.var.db
       .update(devices)
       .set(patch)
-      .where(and(eq(devices.id, c.req.valid("param").deviceId), mine(teamId, c.var.user.id)))
+      .where(and(eq(devices.id, c.req.valid("param").deviceId), mine(c.var.user.id)))
       .returning(columns);
     if (!device) throw new ApiError("not_found", "No such device.");
     return c.json({ device });
@@ -87,10 +88,10 @@ deviceRoutes.patch(
 
 /** Past runs keep their description of the device. */
 deviceRoutes.delete("/devices/:deviceId", deviceParam, async (c) => {
-  const { teamId } = await requireMembership(c);
+  await requireMembership(c);
   const [device] = await c.var.db
     .delete(devices)
-    .where(and(eq(devices.id, c.req.valid("param").deviceId), mine(teamId, c.var.user.id)))
+    .where(and(eq(devices.id, c.req.valid("param").deviceId), mine(c.var.user.id)))
     .returning({ id: devices.id });
   if (!device) throw new ApiError("not_found", "No such device.");
   return c.json({ deleted: true });
