@@ -13,10 +13,10 @@ const owner = "owner@example.com";
 const anna = "anna@example.com";
 const directory: UserDirectory = { ensureUser: async () => "exists" };
 
-async function call(method: string, path: string, as: string, body?: unknown) {
+async function call(method: string, path: string, as: string, body?: unknown, team?: string) {
   const response = await app.request(path, {
     method,
-    headers: { "content-type": "application/json", "x-local-user": as },
+    headers: { "content-type": "application/json", "x-local-user": as, ...(team ? { "x-guidepass-team": team } : {}) },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   return { status: response.status, body: (await response.json()) as any };
@@ -70,10 +70,18 @@ describe("saved devices", () => {
     expect((await call("POST", "/devices", anna, iphone)).status).toBe(422);
   });
 
-  it("forgets a member's devices when they leave the team", async () => {
+  it("keeps a person's devices in all their teams, and forgets them when they leave the last", async () => {
     await call("POST", "/devices", anna, iphone);
     const annaId = (await call("GET", "/me", anna)).body.user.id;
-    expect((await call("DELETE", `/members/${encodeURIComponent(annaId)}`, owner)).status).toBe(200);
+    const second = (await call("POST", "/teams", owner, { name: "Second" })).body.team.id;
+    await call("POST", "/invitations", owner, { email: anna }, second);
+    await call("GET", "/me", anna); // joins on the next sign-in
+    expect((await call("GET", "/devices", anna, undefined, second)).body.devices).toHaveLength(1);
+
+    // Leaving one team keeps them; leaving the last one forgets them.
+    await call("DELETE", `/members/${encodeURIComponent(annaId)}`, owner);
+    expect((await call("GET", "/devices", anna, undefined, second)).body.devices).toHaveLength(1);
+    await call("DELETE", `/members/${encodeURIComponent(annaId)}`, owner, undefined, second);
     await call("POST", "/invitations", owner, { email: anna });
     expect((await call("GET", "/devices", anna)).body.devices).toEqual([]);
   });

@@ -239,6 +239,28 @@
       "Resource": "arn:aws:codebuild:*:*:project/gp-*"
     },
     {
+      "Sid": "UpdaterBuildsRead",
+      "Effect": "Allow",
+      "Action": [
+        "codebuild:ListBuildsForProject",
+        "codebuild:BatchGetBuilds"
+      ],
+      "Resource": "arn:aws:codebuild:*:*:project/gp-*"
+    },
+    {
+      "Sid": "UpdaterLogsRead",
+      "Effect": "Allow",
+      "Action": [
+        "logs:DescribeLogStreams",
+        "logs:GetLogEvents",
+        "logs:FilterLogEvents"
+      ],
+      "Resource": [
+        "arn:aws:logs:*:*:log-group:/aws/codebuild/gp-*",
+        "arn:aws:logs:*:*:log-group:/aws/codebuild/gp-*:*"
+      ]
+    },
+    {
       "Sid": "UpdaterSettings",
       "Effect": "Allow",
       "Action": [

@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-10-29
+
+**Updating from 0.6.0:** with the Update button, or `./tf.sh <instance> apply` by hand. No database changes. To read the updater's builds and logs with `infra/update-log.sh`, give your deploy credentials the current `infra/deploy-policy.json` (two new read-only statements). Old snapshots are pruned from the update *after* this one: an update runs with the build script of the version it starts from.
+
+### Added
+- `infra/update-log.sh <instance>`: the last run of the instance's updater — status, phases and the end of its log — for when an update fails. The deploy policy gets read access to the updater's builds and logs (`UpdaterBuildsRead`, `UpdaterLogsRead`).
+- The updater deletes older database snapshots it took before updates once an update succeeds, keeping the newest `updater_snapshots_to_keep` (Terraform, default 3). Automated backups and snapshots taken by hand are left alone.
+
+### Changed
+- Saved devices belong to the person, not to a team: the same devices in every team they are in. They are deleted when the person leaves their last team.
+- Dependencies: minor and patch updates (AWS SDK, MCP SDK, Hono, Drizzle, Zod, React, React Router, DOMPurify, Marked, Vite, Vitest, Playwright, oxlint).
+
 ## [0.6.0] - 2026-10-28
 
 **Updating from 0.5.0:** with the Update button, or `./tf.sh <instance> apply` by hand. The update adds a column to the apps table (migration `0012`); nothing else to do.

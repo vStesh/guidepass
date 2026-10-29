@@ -9,10 +9,13 @@ To turn the check off, or to follow a fork, set `update_repository` in the insta
 Instances deployed with `self_update = true` have an **Update to X** button for owners (in the banner and under **Settings → Version**). After a confirmation, a CodeBuild project in your AWS account:
 
 1. downloads the release from GitHub (only a `vX.Y.Z` tag of `update_repository`, and only the newest release, newer than the running version) and installs a pinned Terraform version, checked against HashiCorp's checksums;
-2. takes a snapshot of the database (`<name_prefix>-db-before-vX-Y-Z-<time>`, kept until you delete it);
-3. builds the release and runs `terraform apply` with this instance's settings (saved by every apply in SSM, `/<name_prefix>/terraform-variables`) and its state in S3.
+2. takes a snapshot of the database (`<name_prefix>-db-before-vX-Y-Z-<time>`);
+3. builds the release and runs `terraform apply` with this instance's settings (saved by every apply in SSM, `/<name_prefix>/terraform-variables`) and its state in S3;
+4. after a successful update, deletes older snapshots it took before updates, keeping the newest `updater_snapshots_to_keep` (default 3). Automated backups and snapshots you take yourself are never touched.
 
 The page shows the step and the log, and offers to reload when the new version is live (about 5–10 minutes). One update runs at a time. If it fails, nothing is lost: the instance keeps running where the apply stopped, the snapshot is there, and you can finish by hand as below.
+
+To see why an update failed, run `AWS_PROFILE=<profile> ./update-log.sh <instance>` in `infra/`: the last run's status, phases and the end of its log (the deploy credentials need the read rights in the current deploy policy, `UpdaterBuildsRead` and `UpdaterLogsRead`).
 
 A release that changes `infra/deploy-policy.json` may need one update by hand (below): the updater runs with the permissions it had before the update, so new kinds of resources can be refused. Release notes say when.
 
