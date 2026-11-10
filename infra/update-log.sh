@@ -5,7 +5,8 @@
 #   AWS_PROFILE=<profile> ./update-log.sh <instance> [lines]
 #
 # Needs <instance>.tfvars next to this script, and the deploy credentials' read
-# access to the updater (UpdaterBuildsRead / UpdaterLogsRead in deploy-policy.json).
+# access to the updater (UpdaterBuildsRead / UpdaterLogsRead in deploy-policy.json),
+# and jq.
 set -euo pipefail
 cd "$(dirname "$0")"
 
@@ -39,5 +40,6 @@ if [[ "$stream" == "None" || -z "$stream" ]]; then
   exit 0
 fi
 echo "Last $lines lines of $group / $stream:"
+# Each message already ends with its own newline: print them as they are.
 aws logs get-log-events --log-group-name "$group" --log-stream-name "$stream" --limit "$lines" \
-  --query 'events[].message' --output text | tr '\t' '\n'
+  --query 'events[].message' --output json | jq -j '.[]'
