@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "title": "Build 182 — Replies to comments",
+  "type": "feature",
+  "build": "182",
+  "pr": "#118",
+  "meta": "backend on dev: migration 77, get-comments 2.0.6, post-comment 2.0.8",
+  "environments": ["dev", "stg"],
+  "context": "Comments under a post are now **threads, one level deep**. Replying to a reply stays in the same thread and names the person you answer.",
+  "changelog": [
+    {
+      "section": "Added",
+      "items": [
+        "“Reply” with a banner naming who you reply to; “↳ Name” when replying to someone other than the thread's author.",
+        "A “Comment deleted” placeholder for a first comment that has replies.",
+        "A push notification when someone replies to you."
+      ]
+    },
+    { "section": "Fixed", "items": ["Pull-to-refresh no longer duplicates the last comment after a failed load."] }
+  ],
+  "prerequisites": [
+    "Build **182** or newer, iOS and Android; dev backend.",
+    "**Two accounts** (A and B) on two devices; notifications allowed for B."
+  ],
+  "related": [{ "label": "PR #118", "url": null }],
+  "scenarios": [
+    {
+      "key": "reply-to-comment",
+      "title": "Reply to a comment",
+      "important": true,
+      "steps": ["A writes a comment under a post.", "B taps “Reply” under it, writes a reply and sends it."],
+      "expected": "The reply appears under A's comment, indented with a thread line; the banner disappears."
+    },
+    {
+      "key": "reply-to-reply",
+      "title": "Reply to a reply",
+      "steps": ["A taps “Reply” under B's reply and sends a reply."],
+      "expected": "The new reply stays in the same thread and starts with “↳ B”."
+    },
+    {
+      "key": "reply-notification",
+      "title": "Push about a reply",
+      "steps": ["B closes the app.", "A replies to B's comment."],
+      "expected": "B gets a push “A replied to you”; tapping it opens the post scrolled to the reply."
+    },
+    {
+      "key": "deleted-comment",
+      "title": "Deleted first comment keeps its replies",
+      "steps": ["A deletes the comment that has replies."],
+      "expected": "“Comment deleted” takes its place; the replies stay underneath."
+    },
+    {
+      "key": "android-keyboard",
+      "title": "Android: banner and keyboard",
+      "platforms": ["android"],
+      "steps": ["On Android, tap “Reply”, then hide the keyboard with the back gesture."],
+      "expected": "The banner stays above the input; nothing is hidden behind the keyboard."
+    },
+    {
+      "key": "pull-to-retry",
+      "title": "Retry with pull-to-refresh",
+      "steps": ["Turn on airplane mode and open a post.", "Turn it off and pull to refresh."],
+      "expected": "Comments load once, with no duplicates."
+    },
+    {
+      "key": "old-backend-flat-list",
+      "title": "Older backend — flat list",
+      "environments": ["stg"],
+      "steps": ["On stg (old backend), open a post with replies."],
+      "expected": "Comments show as a flat list, oldest first; no thread lines, no errors."
+    }
+  ]
+}

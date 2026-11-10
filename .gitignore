@@ -29,3 +29,4 @@ infra/.build/
 # Browser tests
 test-results/
 playwright-report/
+docs/screenshots/frames/
