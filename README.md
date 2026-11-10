@@ -12,6 +12,31 @@ It is built for small teams that ship mobile and web apps with AI coding agents:
 - **Results for people and agents.** Every tester's result per environment and platform, combined into verdicts (a pass next to a fail is a *conflict*). The agent reads them with `get_results`; Slack gets new guides and runs with problems.
 - **Self-hosted, pay-per-use.** One instance per project in your own AWS account, about $0.60 a month idle (see [costs](#what-it-costs-to-run)).
 
+<table>
+  <tr>
+    <td width="34%" valign="top"><img src="docs/images/run-on-phone.gif" alt="A tester picks a saved device, starts a run on a phone, passes two scenarios and fails one with a note and proof" width="100%"></td>
+    <td valign="top"><img src="docs/images/guide-results.png" alt="A guide with everyone's results: runs by three people, a matrix of scenarios by environment and platform, and the details of a failed scenario" width="100%"></td>
+  </tr>
+  <tr>
+    <td valign="top"><sub>A tester runs a guide on their phone: one tap for a saved device, then pass, fail with proof, blocked or skip for each scenario.</sub></td>
+    <td valign="top"><sub>Everyone's results for the guide, by environment and platform; a failed cell opens who saw what, with proof and the issue.</sub></td>
+  </tr>
+</table>
+
+## How it works
+
+1. **The agent writes the guide.** After a change, your coding agent calls the MCP server: it reads how guides are written here, checks whether one exists for this build, and uploads a guide as JSON — first as a dry run, then for real.
+
+   ```text
+   You:    Write a Guidepass guide for build 182 (replies to comments) and upload it.
+   Agent:  list_apps → get_guide_instructions → list_guides(build 182): none
+           upload_guide(dryRun) → ok: 7 scenarios, dev and stg
+           upload_guide → version 1: https://gp.example.com/guides/…
+   ```
+
+2. **People test on real devices.** Testers open the guide on a phone, pick the device and the build they installed, and mark each scenario. A fail needs proof: a note, text, screenshots, an issue link.
+3. **The agent reads the results and fixes.** `get_results` returns problems first, with notes and proof. After a fix, the agent uploads the next version of the guide with a change note; Guidepass shows which scenarios need a retest and keeps the results of the unchanged ones.
+
 ## Concepts
 
 - **Team** — people with a role: `tester` runs guides and marks results; `writer` also uploads and archives guides, adds areas and creates agent tokens for themselves; `owner` also manages apps, members, Slack and everyone's agent tokens. New members join by email invitation. One instance can hold several teams, each with its own apps, guides, people and agent tokens; people in more than one switch between them in the header. Owners of the first team administer the instance: environments (shared by all teams), updates and new teams.
@@ -52,6 +77,8 @@ npm run dev -w web  # web app on http://localhost:5173, proxies /api to the API
 ```
 
 Locally the API uses PGlite (Postgres in Node) and trusts an `x-local-user: you@example.com` header instead of Cognito; the Lambda handler always verifies Cognito tokens. Without a `/config.json` the web app runs in the same local mode: sign in with any email, no password. Deployed instances get `/config.json` from Terraform (see `web/public/config.example.json`). After changing `api/src/db/schema.ts`, run `npm run db:generate -w api` and commit the new migration.
+
+The pictures in this README are taken from the local app with demo data: `npm run docs:screenshots` (Playwright) saves them to `docs/images/` and the phone frames to `docs/screenshots/frames/`; `python3 docs/screenshots/make-gif.py` (needs Pillow) turns the frames into the GIF.
 
 ## Self-hosting
 
