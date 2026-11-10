@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-11-10
+
+**Updating from 0.7.0:** with the Update button, or `./tf.sh <instance> apply` by hand. Nothing else to do. This is the first update whose build script prunes old snapshots taken before updates.
+
+### Fixed
+- `infra/update-log.sh` printed an empty line after every line of the log. It now needs `jq`.
+
+### Changed
+- Dependencies: minor and patch updates, and the Terraform AWS provider 6.71.
+
 ## [0.7.0] - 2026-10-29
 
 **Updating from 0.6.0:** with the Update button, or `./tf.sh <instance> apply` by hand. No database changes. To read the updater's builds and logs with `infra/update-log.sh`, give your deploy credentials the current `infra/deploy-policy.json` (two new read-only statements). Old snapshots are pruned from the update *after* this one: an update runs with the build script of the version it starts from.
