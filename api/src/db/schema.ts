@@ -126,8 +126,9 @@ export const environments = pgTable("environments", {
   archived: boolean("archived").notNull().default(false),
 });
 
-export type SlackEvent = "guide_created" | "guide_updated" | "run_problems";
-export const slackEvents: SlackEvent[] = ["guide_created", "guide_updated", "run_problems"];
+/** `daily_digest`: a morning message listing guides nobody has started testing yet. */
+export type SlackEvent = "guide_created" | "guide_updated" | "run_problems" | "daily_digest";
+export const slackEvents: SlackEvent[] = ["guide_created", "guide_updated", "run_problems", "daily_digest"];
 
 export const apps = pgTable(
   "apps",

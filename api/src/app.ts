@@ -13,6 +13,7 @@ import { users, type Locale } from "./db/schema.ts";
 import { ApiError } from "./errors.ts";
 import { agentTokenRoutes } from "./routes/agentTokens.ts";
 import { deviceRoutes } from "./routes/devices.ts";
+import { todoRoutes } from "./routes/todo.ts";
 import { updateRoutes } from "./routes/updates.ts";
 import { appRoutes } from "./routes/apps.ts";
 import { guideRoutes } from "./routes/guides.ts";
@@ -113,6 +114,7 @@ export function createApp({
   app.route("/", memberRoutes);
   app.route("/", agentTokenRoutes);
   app.route("/", deviceRoutes);
+  app.route("/", todoRoutes);
   app.route("/", updateRoutes);
 
   return app;

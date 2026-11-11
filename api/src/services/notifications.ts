@@ -3,6 +3,7 @@ import type { GuideContent, GuideType, ScenarioDiff } from "@guidepass/schema";
 import type { Db } from "../db/client.ts";
 import { agentTokens, apps, environments, users, type SlackEvent } from "../db/schema.ts";
 import type { Author } from "./guides.ts";
+import { untestedGuides } from "./todo.ts";
 
 /** Posts a Slack message to an Incoming Webhook. Replaced in tests. */
 export type Notifier = (webhookUrl: string, message: { text: string }) => Promise<void>;
@@ -53,6 +54,9 @@ const texts = {
     blocked: (n: number) => `⛔ ${n} blocked`,
     untested: (n: number) => `${n} not checked`,
     test: "✅ Guidepass notifications are set up for",
+    waiting: (n: number) => `🧪 Waiting for testing: ${n} guide${n === 1 ? "" : "s"} nobody has started`,
+    age: (days: number) => (days === 0 ? "today" : days === 1 ? "1 day" : `${days} days`),
+    more: (n: number) => `…and ${n} more`,
     types: { feature: "Feature", bugfix: "Bug fix", improvement: "Improvement", mixed: "Mixed" } as Record<GuideType, string>,
   },
   uk: {
@@ -69,6 +73,14 @@ const texts = {
     blocked: (n: number) => `⛔ заблоковано: ${n}`,
     untested: (n: number) => `не перевірено: ${n}`,
     test: "✅ Сповіщення Guidepass налаштовано для",
+    waiting: (n: number) => `🧪 Чекають на тестування — гайдів, які ще ніхто не почав: ${n}`,
+    age: (days: number) => {
+      if (days === 0) return "сьогодні";
+      const [ones, tens] = [days % 10, days % 100];
+      const word = ones === 1 && tens !== 11 ? "день" : ones >= 2 && ones <= 4 && (tens < 12 || tens > 14) ? "дні" : "днів";
+      return `${days} ${word}`;
+    },
+    more: (n: number) => `…і ще ${n}`,
     types: { feature: "Фіча", bugfix: "Виправлення", improvement: "Покращення", mixed: "Змішане" } as Record<GuideType, string>,
   },
 };
@@ -208,3 +220,37 @@ export async function sendTestNotification(ctx: NotificationContext, app: AppRow
   await ctx.notify(app.slackWebhookUrl, { text: `${m.test} ${link(teamPage(ctx.publicUrl, `/apps/${app.id}`, app.teamId), app.name)}` });
   return true;
 }
+
+/** At most this many guides per digest; the rest are counted. */
+const DIGEST_LIMIT = 10;
+
+/**
+ * The morning digest (`daily_digest`): for every active app that asks for it, the
+ * guides whose current version nobody has started testing, oldest first. Apps with
+ * nothing waiting get no message. Runs from a schedule; returns how many were sent.
+ */
+export async function sendDailyDigests(ctx: NotificationContext, now = new Date()): Promise<number> {
+  const m = messages(ctx.language);
+  const candidates = await ctx.db.select().from(apps).where(eq(apps.archived, false));
+  let sent = 0;
+  for (const app of candidates) {
+    if (!app.slackWebhookUrl || !app.slackEvents.includes("daily_digest")) continue;
+    try {
+      const waiting = await untestedGuides(ctx.db, app.id);
+      if (!waiting.length) continue;
+      const lines = waiting.slice(0, DIGEST_LIMIT).map((g) => {
+        const days = Math.max(0, Math.floor((now.getTime() - new Date(g.updatedAt).getTime()) / 86_400_000));
+        return `• ${link(teamPage(ctx.publicUrl, `/guides/${g.id}`, app.teamId), g.title)} — ${m.age(days)}`;
+      });
+      if (waiting.length > DIGEST_LIMIT) lines.push(m.more(waiting.length - DIGEST_LIMIT));
+      const title = `${m.waiting(waiting.length)} · ${link(teamPage(ctx.publicUrl, `/apps/${app.id}`, app.teamId), app.name)}`;
+      await ctx.notify(app.slackWebhookUrl, { text: [title, ...lines].join("\n") });
+      sent++;
+    } catch (err) {
+      // One app's broken webhook mustn't stop the others.
+      console.warn(`Daily digest for app ${app.id} failed:`, err);
+    }
+  }
+  return sent;
+}
+

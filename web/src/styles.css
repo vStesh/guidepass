@@ -164,6 +164,7 @@ a.list-item:hover { border-color: var(--line-strong); box-shadow: var(--shadow);
 .list-meta .bar { width: 120px; }
 
 .chip { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 0.8rem; font-weight: 600; background: var(--surface-2); color: var(--muted); }
+.todo-nobody { color: var(--fail); font-weight: 600; }
 .chip-accent { background: var(--accent-bg); color: var(--accent-strong); }
 
 .badge { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 0.78rem; font-weight: 700; white-space: nowrap; }

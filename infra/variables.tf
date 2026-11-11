@@ -146,6 +146,12 @@ variable "updater_terraform_version" {
   }
 }
 
+variable "digest_schedule" {
+  description = "When the morning Slack digest runs (EventBridge schedule expression, UTC); apps turn it on in their Slack settings. Empty turns the schedule off."
+  type        = string
+  default     = "cron(0 7 ? * MON-FRI *)"
+}
+
 variable "updater_snapshots_to_keep" {
   description = "How many database snapshots taken before updates to keep; the updater deletes older ones after a successful update."
   type        = number

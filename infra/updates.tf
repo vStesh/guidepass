@@ -32,6 +32,7 @@ locals {
     db_engine_version         = var.db_engine_version
     updater_terraform_version = var.updater_terraform_version
     updater_snapshots_to_keep = var.updater_snapshots_to_keep
+    digest_schedule           = var.digest_schedule
   }
 
   # What the updater needs that isn't a variable. Read from SSM, not from the

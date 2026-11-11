@@ -228,6 +228,24 @@
       "Resource": "*"
     },
     {
+      "Sid": "Schedules",
+      "Effect": "Allow",
+      "Action": [
+        "events:PutRule",
+        "events:DeleteRule",
+        "events:DescribeRule",
+        "events:EnableRule",
+        "events:DisableRule",
+        "events:PutTargets",
+        "events:RemoveTargets",
+        "events:ListTargetsByRule",
+        "events:TagResource",
+        "events:UntagResource",
+        "events:ListTagsForResource"
+      ],
+      "Resource": "arn:aws:events:*:*:rule/gp-*"
+    },
+    {
       "Sid": "Updater",
       "Effect": "Allow",
       "Action": [

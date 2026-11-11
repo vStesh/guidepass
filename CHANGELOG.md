@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-11-11
+
+**Updating from 0.7.x:** with the Update button, or `./tf.sh <instance> apply` by hand. No database changes. The deploy policy has a new `Schedules` statement (EventBridge rules `gp-*`): give it to your deploy credentials before updating by hand. The updater gets it from the release itself, but IAM can take a few seconds to apply it — if the update stops at the digest schedule, press **Update** again.
+
+### Added
+- **To test** page: each person's unfinished runs (with progress, and a note when the guide has a newer version), then the active guides whose current version they haven't started, newest first, with whether anyone else has started them.
+- **Morning Slack digest** (`daily_digest`, per app in its Slack settings): the guides whose current version nobody has started yet, oldest first, with links and how long they have waited (up to 10, then a count). Apps with nothing waiting get no message. Runs on `digest_schedule` (Terraform, default weekdays 07:00 UTC; empty turns it off) through an EventBridge rule that invokes the API function; a failed run is not retried, so a digest is never posted twice.
+
+### Changed
+- The idle estimate in the README is about $1 a month: the digest wakes the database for about 15 minutes on weekday mornings.
+
 ## [0.7.1] - 2026-11-10
 
 **Updating from 0.7.0:** with the Update button, or `./tf.sh <instance> apply` by hand. Nothing else to do. This is the first update whose build script prunes old snapshots taken before updates.
