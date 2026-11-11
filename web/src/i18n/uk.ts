@@ -274,6 +274,7 @@ export const uk: Messages = {
   "type.mixed": "Змішане",
   "nav.settings": "Налаштування",
   "update.button": "Оновити до {version}",
+  "update.retry": "Спробувати оновити до {version} ще раз",
   "update.confirm": "Оновити Guidepass до {version}?\n\nСпершу буде знято знімок бази, потім розгорнуто нову версію. Це займе приблизно 5–10 хвилин; наприкінці Guidepass може ненадовго не відповідати. Записані результати збережуться.",
   "update.running": "Оновлення до {version}: {phase}…",
   "update.succeeded": "Оновлено до {version}.",
