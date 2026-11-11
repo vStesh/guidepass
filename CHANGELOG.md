@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-11-11
+
+**Updating from 0.8.0, including an update to 0.8.0 that failed:** with the Update button, or `./tf.sh <instance> apply` by hand. Nothing else to do. This update finishes what a failed 0.8.0 update left out (the digest schedule).
+
+### Fixed
+- An update that failed after the new API had been deployed left no way to finish it from the web app: the instance already reported the new version, so no newer release was offered. Settings now offer **Try updating to X again** after such a failure.
+- The updater runs `terraform apply` a second time, 30 seconds later, when the first try fails. The 0.8.0 update changed the updater's own permissions and used them a second later, before AWS had applied them (`AccessDenied` on `events:TagResource`).
+
 ## [0.8.0] - 2026-11-11
 
 **Updating from 0.7.x:** with the Update button, or `./tf.sh <instance> apply` by hand. No database changes. The deploy policy has a new `Schedules` statement (EventBridge rules `gp-*`): give it to your deploy credentials before updating by hand. The updater gets it from the release itself, but IAM can take a few seconds to apply it — if the update stops at the digest schedule, press **Update** again.

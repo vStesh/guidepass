@@ -5,7 +5,7 @@ import { localAuthenticator } from "./auth.ts";
 import { defaultEnvironments, seedEnvironments, type Db } from "./db/client.ts";
 import { createTestDb } from "./db/local.ts";
 import { localDirectory } from "./directory.ts";
-import { memberships } from "./db/schema.ts";
+import { instanceState, memberships } from "./db/schema.ts";
 import type { Updater } from "./updater.ts";
 import { compareVersions, VERSION } from "./version.ts";
 
@@ -157,6 +157,25 @@ describe("Update button", () => {
   it("refuses when this instance already runs the newest release", async () => {
     withUpdater = true;
     answer = () => release(`v${VERSION}`);
+    expect((await call("/updates/run", owner, undefined, "POST", { version: VERSION })).body.error.details.reason).toBe("not_latest");
+  });
+
+  it("tries a failed update again once the instance already runs that version", async () => {
+    withUpdater = true;
+    answer = () => release(`v${VERSION}`);
+    // The update to this version failed after its API had been deployed.
+    builds.set("build-1", { status: "failed", version: VERSION });
+    await db.insert(instanceState).values({
+      key: "update_run",
+      value: { id: "build-1", version: VERSION, from: "0.0.1", startedBy: "Owner", startedAt: "2026-11-11T11:39:00Z" },
+    });
+
+    const again = await call("/updates/run", owner, undefined, "POST", { version: VERSION });
+    expect(again.status).toBe(202);
+    expect(again.body.run).toMatchObject({ id: "build-2", version: VERSION, from: "0.0.1", commit: COMMIT });
+
+    // Only a failed run of this version can be retried.
+    builds.get("build-2")!.status = "succeeded";
     expect((await call("/updates/run", owner, undefined, "POST", { version: VERSION })).body.error.details.reason).toBe("not_latest");
   });
 });
