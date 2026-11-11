@@ -11,7 +11,7 @@ export interface User {
   locale: Locale;
 }
 
-export type SlackEvent = "guide_created" | "guide_updated" | "run_problems";
+export type SlackEvent = "guide_created" | "guide_updated" | "run_problems" | "daily_digest";
 
 export interface TeamRef {
   id: string;
@@ -56,6 +56,37 @@ export interface SavedDevice {
 }
 
 export type DeviceFields = { name: string; platform: Platform; model: string; os?: string; details?: string };
+
+/** What the signed-in person has to test: their unfinished runs and guides they haven't started. */
+export interface Todo {
+  runs: {
+    id: string;
+    environment: string;
+    platform: Platform;
+    device: string;
+    build: string | null;
+    startedAt: string;
+    guideId: string;
+    title: string;
+    appName: string;
+    version: number;
+    currentVersion: number;
+    counts: Counts;
+  }[];
+  waiting: {
+    id: string;
+    title: string;
+    type: GuideType | null;
+    build: string | null;
+    environments: string[];
+    appId: string;
+    appName: string;
+    currentVersion: number;
+    updatedAt: string;
+    /** People with runs on this version so far; 0 means nobody has started. */
+    testers: number;
+  }[];
+}
 
 export interface Area {
   id: string;
@@ -407,6 +438,7 @@ export function createApi(auth: Auth, team: () => string | null = chosenTeam) {
       }),
     revokeInvitation: (id: string) => request<unknown>("DELETE", `/invitations/${id}`),
 
+    todo: () => request<Todo>("GET", "/todo"),
     devices: () => request<{ devices: SavedDevice[] }>("GET", "/devices"),
     createDevice: (body: DeviceFields) => request<{ device: SavedDevice }>("POST", "/devices", body),
     updateDevice: (deviceId: string, body: Partial<DeviceFields>) =>

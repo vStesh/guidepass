@@ -9,8 +9,9 @@ It is built for small teams that ship mobile and web apps with AI coding agents:
 
 - **Guides from the agent.** Through the MCP server an agent (Claude Code, or any MCP client) reads the writing instructions, uploads a guide as JSON and gets a diff of what needs retesting. Versions keep results for unchanged scenarios.
 - **Runs on a phone.** A tester picks the environment, platform, device, the build or commit actually installed and the app account they use, then marks each scenario: pass, fail, blocked or skip, with a note, proof (text or screenshots) and an issue link.
-- **Results for people and agents.** Every tester's result per environment and platform, combined into verdicts (a pass next to a fail is a *conflict*). The agent reads them with `get_results`; Slack gets new guides and runs with problems.
-- **Self-hosted, pay-per-use.** One instance per project in your own AWS account, about $0.60 a month idle (see [costs](#what-it-costs-to-run)).
+- **Results for people and agents.** Every tester's result per environment and platform, combined into verdicts (a pass next to a fail is a *conflict*). The agent reads them with `get_results`; Slack gets new guides, runs with problems and, if you like, a morning digest of guides nobody has started.
+- **Nothing forgotten.** *To test* shows each person their unfinished runs and the guides they haven't started yet.
+- **Self-hosted, pay-per-use.** One instance per project in your own AWS account, about $1 a month idle (see [costs](#what-it-costs-to-run)).
 
 <table>
   <tr>
@@ -96,11 +97,11 @@ Step-by-step deployment, DNS options, Cognito settings and removal: [infra/READM
 
 Monthly estimate for one instance in `eu-central-1` (Frankfurt), on-demand prices from the AWS Price List (September 2026). Prices in other regions differ by roughly ±20%.
 
-Almost everything is pay-per-use. The only fixed cost is the database password secret; the database itself pauses after 15 idle minutes and then costs only its storage.
+Almost everything is pay-per-use. The only fixed cost is the database password secret; the database itself pauses after 15 idle minutes and then costs only its storage. The morning Slack digest wakes it for about 15 minutes on weekday mornings (≈ $0.40 a month); `digest_schedule = ""` turns that off.
 
 | Usage | Database time | Estimate |
 | --- | --- | --- |
-| Idle: installed, nobody signs in | paused | **≈ $0.60** |
+| Idle: installed, nobody signs in | paused (≈ 5 h for the digest) | **≈ $1** |
 | Light: a small team tests ~2 hours a day on workdays | ~50 h | **≈ $4** |
 | Busy: testing through the whole working day | ~180 h | **≈ $14** |
 | Never pauses (`db_min_capacity = 0.5`) | 730 h | **≈ $52** |

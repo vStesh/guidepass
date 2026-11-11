@@ -15,6 +15,7 @@ import { SettingsPage } from "./pages/SettingsPage.tsx";
 import { SetupPage } from "./pages/SetupPage.tsx";
 import { SignInPage } from "./pages/SignInPage.tsx";
 import { TeamPage } from "./pages/TeamPage.tsx";
+import { TodoPage } from "./pages/TodoPage.tsx";
 import { SessionContext, type Session } from "./session.tsx";
 
 type State = { status: "loading" } | { status: "signedOut" } | { status: "error"; error: unknown } | { status: "ready"; me: Me };
@@ -88,6 +89,7 @@ export function App({ auth }: { auth: Auth }) {
             <Routes>
               <Route element={<Layout />}>
                 <Route index element={<GuidesPage />} />
+                <Route path="todo" element={<TodoPage />} />
                 <Route path="apps" element={<AppsPage />} />
                 <Route path="apps/:appId" element={<AppPage />} />
                 <Route path="guides/:guideId" element={<GuidePage />} />

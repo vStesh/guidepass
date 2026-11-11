@@ -6,6 +6,7 @@ import { required } from "./config.ts";
 import { createDataApiDb } from "./db/client.ts";
 import { cognitoDirectory } from "./directory.ts";
 import { createMcpHandler } from "./mcp/server.ts";
+import { sendDailyDigests, slackNotifier } from "./services/notifications.ts";
 import { s3EvidenceStorage } from "./storage.ts";
 import { codebuildUpdater } from "./updater.ts";
 
@@ -51,6 +52,26 @@ const mcp = createMcpHandler({
  * under `/api` (Cognito sign-in; local auth is never available here) and the MCP
  * server at `/mcp` (agent tokens).
  */
-export const handler = handle(
-  new Hono().route("/api", api).all("/mcp", (c) => mcp(c.req.raw)),
-);
+const http = handle(new Hono().route("/api", api).all("/mcp", (c) => mcp(c.req.raw)));
+
+/** What the EventBridge schedule sends (`infra/digest.tf`). */
+interface DigestEvent {
+  guidepass: "daily-digest";
+}
+
+const isDigest = (event: unknown): event is DigestEvent =>
+  typeof event === "object" && event !== null && (event as DigestEvent).guidepass === "daily-digest";
+
+/** HTTP requests from API Gateway, or the morning digest from the schedule. */
+export const handler = async (event: Parameters<typeof http>[0] | DigestEvent, context: Parameters<typeof http>[1]) => {
+  if (isDigest(event)) {
+    const sent = await sendDailyDigests({
+      db,
+      notify: slackNotifier,
+      publicUrl: required("PUBLIC_URL"),
+      language: process.env.GUIDE_LANGUAGE || "en",
+    });
+    return { sent };
+  }
+  return http(event, context);
+};

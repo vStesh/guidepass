@@ -43,6 +43,15 @@ test("a tester runs the guide on a phone, with a screenshot as proof of a fail @
   await signIn(page, tester);
   await expect(page.getByRole("link", { name: "Settings" })).toHaveCount(0);
 
+  // "To test" lists the guide they haven't started (on the first project; the second
+  // shares the instance, so its tester has already run it there).
+  await page.getByRole("link", { name: "To test" }).click();
+  await expect(page.getByRole("heading", { name: "To test" })).toBeVisible();
+  if (testInfo.project.name === "desktop") {
+    await expect(page.getByRole("heading", { name: "Not started by you" })).toBeVisible();
+    await expect(page.getByRole("main").getByText("Nobody has started it")).toBeVisible();
+  }
+
   // The tester saves their phone once in the profile (one per project: they share the instance)...
   const deviceName = `Test Pixel (${testInfo.project.name})`;
   await page.goto("/profile");
@@ -80,6 +89,12 @@ test("a tester runs the guide on a phone, with a screenshot as proof of a fail @
   const keyboard = page.locator(".run-card").filter({ hasText: "Android: banner and keyboard" });
   await keyboard.getByRole("button", { name: "Pass" }).click();
   await expect(keyboard).toHaveClass(/run-card-pass/);
+
+  // An unfinished run is the first thing on "To test".
+  await page.goto("/todo");
+  await expect(page.getByRole("heading", { name: "Continue" })).toBeVisible();
+  await page.getByRole("link", { name: /Build 179/ }).first().click();
+  await expect(page).toHaveURL(/\/runs\//);
 
   await page.getByRole("button", { name: "Finish run" }).click();
   await expect(page.getByRole("button", { name: "Reopen" })).toBeVisible();

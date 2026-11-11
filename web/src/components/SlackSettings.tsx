@@ -4,7 +4,7 @@ import { useI18n } from "../i18n/index.tsx";
 import { useSession } from "../session.tsx";
 import { ErrorBox } from "./ui.tsx";
 
-const events: SlackEvent[] = ["guide_created", "guide_updated", "run_problems"];
+const events: SlackEvent[] = ["guide_created", "guide_updated", "run_problems", "daily_digest"];
 
 /** Owner settings for an app's Slack channel. The saved URL is never shown back. */
 export function SlackSettings({ app, onSaved }: { app: App; onSaved: () => void }) {
