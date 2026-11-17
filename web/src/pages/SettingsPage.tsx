@@ -203,7 +203,7 @@ function VersionCard() {
               : t("update.noReleases")}
           </p>
           {status.checkedAt && <p className="muted small">{t("update.checked", { date: formatDate(status.checkedAt, locale) })}</p>}
-          {status.canUpdate && <UpdateRun latest={status.updateAvailable ? (status.latest?.version ?? null) : null} />}
+          {status.canUpdate && <UpdateRun latest={status.updateAvailable ? (status.latest?.version ?? null) : null} current={status.current} />}
           <div className="row">
             <button type="button" className="button button-small" disabled={checking} onClick={() => void check(true)}>
               {t("update.checkNow")}

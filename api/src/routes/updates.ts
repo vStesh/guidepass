@@ -41,6 +41,8 @@ interface StoredRun {
   from: string;
   startedBy: string;
   startedAt: string;
+  /** The commit deployed, so a failed run can be retried with the same code. */
+  commit?: string;
 }
 
 function updaterOf(c: { var: AppEnv["Variables"] }) {
@@ -73,6 +75,10 @@ updateRoutes.get("/updates/run", async (c) => {
  * Updates this instance to the newest release: snapshot of the database, then
  * terraform apply of that release (infra/updater/buildspec.yml). Owners only,
  * one at a time, and only to the release the update check found.
+ *
+ * An update replaces the API and the web app part of the way through, so when it
+ * fails after that, the instance already runs the new version and no newer release
+ * is offered. Retrying the failed version is allowed then, so the update can finish.
  */
 updateRoutes.post(
   "/updates/run",
@@ -82,12 +88,17 @@ updateRoutes.post(
     const updater = updaterOf(c);
     const { version } = c.req.valid("json");
     const status = await getUpdateStatus(c.var.db, { repository: c.var.updates.repository, fetch: c.var.updates.fetch });
-    if (!status.updateAvailable || status.latest?.version !== version) {
+    const last = await lastRun(c);
+    const retry =
+      version === VERSION &&
+      last?.version === version &&
+      (await updater.get(last.id).catch(() => null))?.status === "failed";
+    if (!retry && (!status.updateAvailable || status.latest?.version !== version)) {
       throw new ApiError("conflict", `Version ${version} isn't the newest release, or this instance already runs it.`, {
         reason: "not_latest",
       });
     }
-    const commit = status.latest.commit;
+    const commit = (retry ? last?.commit : undefined) ?? (status.latest?.version === version ? status.latest.commit : null);
     if (!commit) {
       throw new ApiError("conflict", "Couldn't find the commit of this release. Check for updates again.", { reason: "no_commit" });
     }
@@ -109,9 +120,11 @@ updateRoutes.post(
       const next: StoredRun = {
         id,
         version,
-        from: VERSION,
+        // A retry keeps where the update started from.
+        from: retry && last ? last.from : VERSION,
         startedBy: c.var.user.name ?? c.var.user.email,
         startedAt: new Date().toISOString(),
+        commit,
       };
       await tx.update(instanceState).set({ value: next, updatedAt: new Date() }).where(eq(instanceState.key, RUN_KEY));
       return next;

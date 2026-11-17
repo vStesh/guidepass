@@ -273,6 +273,7 @@ export const en = {
   "type.mixed": "Mixed",
   "nav.settings": "Settings",
   "update.button": "Update to {version}",
+  "update.retry": "Try updating to {version} again",
   "update.confirm": "Update Guidepass to {version}?\n\nFirst a snapshot of the database is taken, then the new version is deployed. It takes about 5–10 minutes; Guidepass may not answer for a moment near the end. Results already recorded are kept.",
   "update.running": "Updating to {version}: {phase}…",
   "update.succeeded": "Updated to {version}.",

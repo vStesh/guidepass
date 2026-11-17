@@ -13,7 +13,7 @@ Instances deployed with `self_update = true` have an **Update to X** button for 
 3. builds the release and runs `terraform apply` with this instance's settings (saved by every apply in SSM, `/<name_prefix>/terraform-variables`) and its state in S3;
 4. after a successful update, deletes older snapshots it took before updates, keeping the newest `updater_snapshots_to_keep` (default 3). Automated backups and snapshots you take yourself are never touched.
 
-The page shows the step and the log, and offers to reload when the new version is live (about 5–10 minutes). One update runs at a time. If it fails, nothing is lost: the instance keeps running where the apply stopped, the snapshot is there, and you can finish by hand as below.
+The page shows the step and the log, and offers to reload when the new version is live (about 5–10 minutes). One update runs at a time. If it fails, nothing is lost: the instance keeps running where the apply stopped, and the snapshot is there. The updater already tries `terraform apply` a second time on its own; if it still fails, fix the cause and press the button again (when the new version's API was already deployed, the page offers to try that version again), or finish by hand as below.
 
 To see why an update failed, run `AWS_PROFILE=<profile> ./update-log.sh <instance>` in `infra/`: the last run's status, phases and the end of its log (the deploy credentials need the read rights in the current deploy policy, `UpdaterBuildsRead` and `UpdaterLogsRead`).
 

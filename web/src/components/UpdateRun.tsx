@@ -7,9 +7,10 @@ import { ErrorBox, formatDate } from "./ui.tsx";
 /**
  * The Update button and the progress of the last update: starts the instance's
  * updater for the newest release (after a confirmation), then follows its log
- * until it succeeds or fails.
+ * until it succeeds or fails. An update that failed after the new code was
+ * deployed (`current` is already its version) can be tried again.
  */
-export function UpdateRun({ latest }: { latest: string | null }) {
+export function UpdateRun({ latest, current }: { latest: string | null; current: string }) {
   const { t, locale } = useI18n();
   const { api } = useSession();
   const [run, setRun] = useState<Run | null>(null);
@@ -38,12 +39,12 @@ export function UpdateRun({ latest }: { latest: string | null }) {
     return () => clearInterval(timer);
   }, [api, run?.status]);
 
-  async function start() {
-    if (!latest || !window.confirm(t("update.confirm", { version: latest }))) return;
+  async function start(version: string | null) {
+    if (!version || !window.confirm(t("update.confirm", { version }))) return;
     setStarting(true);
     setError(null);
     try {
-      await api.startUpdate(latest);
+      await api.startUpdate(version);
       await load();
     } catch (err) {
       setError(err);
@@ -55,11 +56,17 @@ export function UpdateRun({ latest }: { latest: string | null }) {
   const running = run?.status === "running";
   // Until the page is reloaded it still runs the old code: don't offer the same update again.
   const done = run?.status === "succeeded" && run.version === latest;
+  const retry = !latest && run?.status === "failed" && run.version === current;
   return (
     <div className="stack">
       {latest && !running && !done && (
-        <button type="button" className="button button-primary" disabled={starting} onClick={() => void start()}>
+        <button type="button" className="button button-primary" disabled={starting} onClick={() => void start(latest)}>
           {t("update.button", { version: latest })}
+        </button>
+      )}
+      {retry && (
+        <button type="button" className="button button-primary" disabled={starting} onClick={() => void start(run.version)}>
+          {t("update.retry", { version: run.version })}
         </button>
       )}
       {run && (
