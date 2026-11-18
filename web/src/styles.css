@@ -162,6 +162,18 @@ a.list-item:hover { border-color: var(--line-strong); box-shadow: var(--shadow);
 .list-title { font-weight: 650; }
 .list-meta { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; color: var(--muted); font-size: 0.88rem; }
 .list-meta .bar { width: 120px; }
+.list-item[class*="guide-"] { border-left-width: 4px; }
+.guide-notStarted { border-left-color: var(--line-strong); }
+.guide-inProgress { border-left-color: var(--accent); }
+.guide-failing { border-left-color: var(--fail); }
+.guide-done { border-left-color: var(--pass); }
+.state-pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 0.8rem; font-weight: 700; white-space: nowrap; }
+.state-notStarted { background: var(--untested-bg); color: var(--muted); }
+.state-inProgress { background: var(--accent-bg); color: var(--accent-strong); }
+.state-failing { background: var(--fail-bg); color: var(--fail); }
+.state-done { background: var(--pass-bg); color: var(--pass); }
+.activity-problems { color: var(--fail); font-weight: 600; }
+.activity-mine { color: var(--accent-strong); font-weight: 600; }
 
 .chip { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 0.8rem; font-weight: 600; background: var(--surface-2); color: var(--muted); }
 .todo-nobody { color: var(--fail); font-weight: 600; }

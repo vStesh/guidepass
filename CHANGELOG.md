@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-11-18
+
+### Added
+- Guide cards in the lists (all guides, and an app's guides) show where testing of the current version stands: **Not started**, **Testing**, **Has failures** or **Passed** (also as the colour of the card's edge), the combined progress bar with how many scenarios are checked, failures and conflicts, blocked scenarios, how many people are testing, runs in progress, your own run, and the last activity. The numbers are the same as on the guide's page, including results carried over from older versions where a scenario hasn't changed (marked with *).
+
 ## [0.8.1] - 2026-11-11
 
 **Updating from 0.8.0, including an update to 0.8.0 that failed:** with the Update button, or `./tf.sh <instance> apply` by hand. Nothing else to do. This update finishes what a failed 0.8.0 update left out (the digest schedule).
