@@ -5,6 +5,7 @@ import type { App, Area, UploadResult } from "../api.ts";
 import { PlatformsEditor, type PlatformsValue } from "../components/PlatformsEditor.tsx";
 import { SlackSettings } from "../components/SlackSettings.tsx";
 import { Chip, ErrorBox, Load, TypeBadge, formatDate, platformLabel, slugify } from "../components/ui.tsx";
+import { GuideActivityLine, guideStateClass } from "../components/GuideActivity.tsx";
 import { useI18n } from "../i18n/index.tsx";
 import { canWrite, isOwner, useLoad, useSession } from "../session.tsx";
 
@@ -108,7 +109,7 @@ export function AppPage() {
                   <ul className="list">
                     {guides.map((g) => (
                       <li key={g.id}>
-                        <Link to={`/guides/${g.id}`} className="list-item">
+                        <Link to={`/guides/${g.id}`} className={`list-item${guideStateClass(g.activity)}`}>
                           <span className="list-title">{g.title}</span>
                           <span className="list-meta">
                             {g.type && <TypeBadge type={g.type} />}
@@ -119,6 +120,7 @@ export function AppPage() {
                             <span>v{g.currentVersion}</span>
                             <span>{t("app.updated", { date: formatDate(g.updatedAt, locale) })}</span>
                           </span>
+                          <GuideActivityLine activity={g.activity} />
                         </Link>
                       </li>
                     ))}

@@ -5,6 +5,7 @@ import { requireMembership, type AppEnv } from "../context.ts";
 import { getGuideDetail, listGuides, setGuideStatus } from "../services/catalog.ts";
 import type { GuideContent } from "@guidepass/schema";
 import { uploadGuide } from "../services/guides.ts";
+import { withActivity } from "../services/activity.ts";
 import { announceGuideUpload } from "../services/notifications.ts";
 
 export const guideRoutes = new Hono<AppEnv>();
@@ -26,7 +27,8 @@ const listQuery = {
 /** Every guide the person's team has, across apps: the home page. */
 guideRoutes.get("/guides", validate("query", z.object({ ...listQuery, appId: z.uuid().optional() })), async (c) => {
   const { teamId } = await requireMembership(c);
-  return c.json({ guides: await listGuides(c.var.db, teamId, c.req.valid("query")) });
+  const list = await listGuides(c.var.db, teamId, c.req.valid("query"));
+  return c.json({ guides: await withActivity(c.var.db, list, c.var.user.id) });
 });
 
 guideRoutes.get(
@@ -35,7 +37,8 @@ guideRoutes.get(
   validate("query", z.object(listQuery)),
   async (c) => {
     const { teamId } = await requireMembership(c);
-    return c.json({ guides: await listGuides(c.var.db, teamId, { ...c.req.valid("query"), appId: c.req.valid("param").appId }) });
+    const list = await listGuides(c.var.db, teamId, { ...c.req.valid("query"), appId: c.req.valid("param").appId });
+    return c.json({ guides: await withActivity(c.var.db, list, c.var.user.id) });
   },
 );
 

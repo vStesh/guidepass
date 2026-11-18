@@ -3,6 +3,7 @@ import { Link, useSearchParams } from "react-router";
 import { guideTypes } from "@guidepass/schema/core";
 import type { GuideSummary } from "../api.ts";
 import { Chip, ErrorBox, Load, TypeBadge, authorLabel, formatDate } from "../components/ui.tsx";
+import { GuideActivityLine, guideStateClass } from "../components/GuideActivity.tsx";
 import { useI18n } from "../i18n/index.tsx";
 import { useLoad, useSession } from "../session.tsx";
 
@@ -166,7 +167,7 @@ export function GuidesPage() {
                       <ul className="list">
                         {all.map((g) => (
                           <li key={g.id}>
-                            <Link to={`/guides/${g.id}`} className="list-item">
+                            <Link to={`/guides/${g.id}`} className={`list-item${guideStateClass(g.activity)}`}>
                               <span className="list-title">{g.title}</span>
                               <span className="list-meta">
                                 <Chip tone="accent">{g.appName}</Chip>
@@ -178,6 +179,7 @@ export function GuidesPage() {
                                 <span>{t("app.updated", { date: formatDate(g.updatedAt, locale) })}</span>
                                 {g.updatedBy && <span>{authorLabel(t, g.updatedBy)}</span>}
                               </span>
+                              <GuideActivityLine activity={g.activity} />
                             </Link>
                           </li>
                         ))}

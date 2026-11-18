@@ -123,6 +123,18 @@ export interface GuideSummary {
   updatedAt: string;
   /** Who uploaded the current version. */
   updatedBy?: VersionAuthor;
+  /** How far testing of the current version has got (guide lists only). */
+  activity?: GuideActivity | null;
+}
+
+export interface GuideActivity {
+  counts: Record<Verdict, number>;
+  testers: number;
+  runs: number;
+  openRuns: number;
+  lastActivityAt: string | null;
+  mine: "none" | "open" | "finished";
+  carriedOver: boolean;
 }
 
 /** A person in the web UI, or an agent acting for the person who issued its token. */
